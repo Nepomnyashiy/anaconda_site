@@ -1,0 +1,24 @@
+---
+- name: Download and run NodeSource setup script for Node.js 20.x
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  become: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install Node.js
+  package:
+    name: nodejs
+    state: present
+  become: yes
+
+- name: Install PM2 globally
+  npm:
+    name: pm2
+    global: yes
+    state: present
+
+- name: Install PM2 startup script
+  command: pm2 startup
+  become: yes
+  args:
+    creates: /etc/systemd/system/pm2-root.service

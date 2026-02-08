@@ -1,0 +1,45 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+  become: yes
+
+- name: Install required system packages
+  package:
+    name:
+      - curl
+      - git
+      - ufw
+      - rsync
+    state: present
+  become: yes
+
+- name: Configure UFW firewall to allow SSH
+  ufw:
+    rule: allow
+    port: 22
+    proto: tcp
+  become: yes
+
+- name: Configure UFW firewall to allow HTTP (custom port)
+  ufw:
+    rule: allow
+    port: "{{ server_port }}"
+    proto: tcp
+  become: yes
+
+- name: Enable UFW firewall
+  ufw:
+    state: enabled
+    policy: reject
+  become: yes
+
+- name: Create deployment directory
+  file:
+    path: "{{ deployment_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes

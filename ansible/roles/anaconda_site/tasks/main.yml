@@ -1,0 +1,100 @@
+---
+- name: Create application directory
+  file:
+    path: "{{ deployment_path }}/source"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Copy application files to server (excluding .git, node_modules, and ansible)
+  synchronize:
+    src: "{{ playbook_dir }}/../../anaconda-site/"
+    dest: "{{ deployment_path }}/source"
+    delete: yes
+    recursive: yes
+    rsync_opts:
+      - "--exclude=.git"
+      - "--exclude=node_modules"
+      - "--exclude=ansible"
+  become: yes
+
+- name: Verify copied files
+  command: ls -la "{{ deployment_path }}/source"
+  register: copied_files_list
+  become: yes
+
+- name: Debug file copying
+  debug:
+    var: copied_files_list
+
+- name: Copy .env.production file
+  template:
+    src: env.j2
+    dest: "{{ deployment_path }}/.env.production"
+    mode: '0644'
+    backup: yes
+  become: yes
+
+- name: Change ownership of deployment directory
+  file:
+    path: "{{ deployment_path }}"
+    state: directory
+    recurse: yes
+    owner: root
+    group: root
+  become: yes
+
+- name: Remove existing node_modules
+  file:
+    path: "{{ deployment_path }}/source/node_modules"
+    state: absent
+  become: yes
+
+- name: Remove package-lock.json
+  file:
+    path: "{{ deployment_path }}/source/package-lock.json"
+    state: absent
+  become: yes
+
+- name: Install npm dependencies
+  npm:
+    path: /opt/anaconda-site/source
+    state: present
+  become: yes
+
+- name: Build the application
+  command: npm run build
+  args:
+    chdir: "{{ deployment_path }}/source"
+  environment:
+    NODE_ENV: production
+  become: yes
+
+- name: Install serve globally
+  npm:
+    name: serve
+    global: yes
+    state: present
+
+- name: Start the application with PM2
+  command: pm2 start "serve -s dist -l {{ server_port }}" --name "{{ app_name }}" -- cwd "{{ deployment_path }}/source"
+  args:
+    chdir: "{{ deployment_path }}/source"
+  become: yes
+  register: pm2_start_result
+
+- name: Save PM2 processes
+  command: pm2 save
+  become: yes
+  when: pm2_start_result.changed
+
+- name: Verify application responds
+  delegate_to: localhost
+  uri:
+    url: "http://{{ hostvars[item].ansible_host | default(item) }}:{{ server_port }}"
+    status_code: 200
+    validate_certs: no
+    timeout: 20
+  loop: "{{ ansible_play_hosts }}"
+  loop_control:
+    label: "{{ hostvars[item].ansible_host | default(item) }}"

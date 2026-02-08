@@ -1,0 +1,13 @@
+---
+# Server configuration
+server_port: 9998
+deployment_path: /opt/anaconda-site
+app_name: anaconda-site
+
+# Environment variables
+openrouter_api_key: "{{ lookup('file', playbook_dir ~ '/../keys/openrouter_anaconda.key') | trim }}"
+
+# Firewall settings
+firewall_allowed_ports:
+  - 9998
+  - 22

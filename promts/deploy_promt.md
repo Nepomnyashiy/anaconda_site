@@ -1,0 +1,1 @@
+Сделай деплой на сервер. Используя @/anaconda-site/keys @/anaconda-site/ansible

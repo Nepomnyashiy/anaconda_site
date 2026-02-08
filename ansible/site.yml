@@ -1,0 +1,24 @@
+---
+- name: Deploy Anaconda Site
+  hosts: webservers
+  gather_facts: yes
+  vars:
+    # Vault variable for GEMINI API key - in practice, this should be stored securely
+
+  
+  pre_tasks:
+    - name: Include group variables
+      include_vars: "group_vars/all.yml"
+
+  roles:
+    - role: common
+      tags: common
+    - role: node_app
+      tags: node
+    - role: anaconda_site
+      tags: app
+
+  post_tasks:
+    - name: Print verification result
+      debug:
+        msg: "Application is accessible at http://{{ ansible_host }}:{{ server_port }}"
