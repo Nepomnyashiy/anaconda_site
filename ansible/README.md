@@ -8,6 +8,19 @@ This directory contains the Ansible playbooks to deploy the Anaconda Site to the
 - SSH access to the target server with root privileges
 - The `id_ed25519` private key in the `keys/` directory
 
+## Automatic Deployment (GitHub Actions)
+
+This repository includes a GitHub Actions workflow that deploys on every push to the `main` branch.
+
+### Required GitHub Secrets
+
+Add the following secret in your repository settings:
+
+- `ANSIBLE_SSH_PRIVATE_KEY`: The private key content that matches the server access in `inventory/hosts.ini`.
+- `OPENROUTER_API_KEY`: The OpenRouter API key used to populate `OPENROUTER_API_KEY` in the deployed app.
+
+The workflow writes these secrets to `ansible/keys/id_ed25519` and `ansible/keys/openrouter_anaconda.key`, runs the playbook, and disables strict host key checking.
+
 ## Deployment Steps
 
 1. Ensure your SSH key is available and permissions are set correctly:
