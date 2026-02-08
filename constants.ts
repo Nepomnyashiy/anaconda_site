@@ -251,6 +251,8 @@ export const CONTENT_RU: Content = {
       welcomeMessage: "Система онлайн. Я готов рассчитать стоимость внедрения. Какой уровень вас интересует?",
       inputPlaceholder: "Напишите сообщение...",
       botTyping: "Anaconda печатает...",
+      defaultResponse: "Спасибо за запрос. Специалист Макс уже изучает ваш кейс. Он свяжется с вами в течение 10 минут.",
+      auditResponse: "Заявка на бесплатный аудит принята. Мы подготовим отчет за 48 часов.",
       quickReplies: [
         "Заказать аудит (Бесплатно)",
         "Цена: Единое окно",
@@ -419,31 +421,33 @@ export const CONTENT_EN: Content = {
     position: ""
   },
   footer: {
-    title: "Начните трансформацию.",
-    subtitle: "Выберите уровень внедрения или закажите бесплатный аудит прямо в чате.",
-    address: "Москва, Башня Федерация, 42 этаж",
+    title: "Start the transformation.",
+    subtitle: "Choose the integration level or order a free audit right in the chat.",
+    address: "Moscow, Federation Tower, 42nd floor",
     chat: {
-      header: "Центр управления",
-      welcomeMessage: "Система онлайн. Я готов рассчитать стоимость внедрения. Какой уровень вас интересует?",
-      inputPlaceholder: "Напишите сообщение...",
-      botTyping: "Anaconda печатает...",
+      header: "Control Center",
+      welcomeMessage: "System online. I can calculate implementation costs. Which level interests you?",
+      inputPlaceholder: "Type a message...",
+      botTyping: "Anaconda is typing...",
+      defaultResponse: "Thanks for the request. Max is already reviewing your case and will contact you within 10 minutes.",
+      auditResponse: "Free audit request received. We will prepare a report within 48 hours.",
       quickReplies: [
-        "Заказать аудит (Бесплатно)",
-        "Цена: Единое окно",
-        "Цена: Цифровой контроль",
-        "Цена: AI симбионт"
+        "Order audit (Free)",
+        "Price: Single Window",
+        "Price: Digital Control",
+        "Price: AI Symbiont"
       ]
     },
     links: {
-      privacy: "Политика конфиденциальности",
-      terms: "Условия использования"
+      privacy: "Privacy Policy",
+      terms: "Terms of Use"
     }
   },
   nav: {
-    philosophy: "Философия",
-    levels: "Уровни",
-    features: "Функции",
-    cta: "Заказать аудит"
+    philosophy: "Philosophy",
+    levels: "Levels",
+    features: "Features",
+    cta: "Order audit"
   },
   chaos: {
     scrollText: "Scroll to synchronize",

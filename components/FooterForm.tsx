@@ -21,6 +21,7 @@ export const FooterForm: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasMountedRef = useRef(false);
+  const hasInitializedMessagesRef = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -35,6 +36,10 @@ export const FooterForm: React.FC = () => {
   }, [messages, isTyping]);
 
   useEffect(() => {
+    if (!hasInitializedMessagesRef.current) {
+      hasInitializedMessagesRef.current = true;
+      return;
+    }
     setMessages([{ id: '1', text: chat.welcomeMessage, sender: 'bot', timestamp: new Date() }]);
   }, [chat.welcomeMessage]);
 
@@ -52,6 +57,7 @@ export const FooterForm: React.FC = () => {
   const handleSend = (text: string) => {
     const textToSend = text.trim();
     if (!textToSend) return;
+    const normalizedText = textToSend.toLowerCase();
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -64,9 +70,9 @@ export const FooterForm: React.FC = () => {
     setIsTyping(true);
 
     setTimeout(() => {
-      let responseText = "Спасибо за запрос. Специалист Макс уже изучает ваш кейс. Он свяжется с вами в течение 10 минут.";
-      if (text.includes("Audit") || text.includes("Аудит")) {
-         responseText = "Заявка на бесплатный аудит принята. Мы подготовим отчет за 48 часов.";
+      let responseText = chat.defaultResponse;
+      if (normalizedText.includes("audit") || normalizedText.includes("аудит")) {
+         responseText = chat.auditResponse;
       }
 
       const botMsg: Message = {
