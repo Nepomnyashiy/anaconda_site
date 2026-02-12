@@ -39,27 +39,16 @@ export const ChaosAnimation: React.FC = () => {
       const isMobile = window.innerWidth < 768;
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       
       // Simplified configuration for better performance
-      const scrollDuration = isMobile ? "+=150%" : "+=180%";
+      const scrollDuration = isMobile ? "+=120%" : "+=150%";
       const scrubStrength = isMobile ? 0.3 : 0.4; // Lower values for faster response
       const iconScale = isMobile ? 0.8 : 1;
       
       // Limit the number of icons for better performance
       const visibleIcons = isMobile ? Math.min(8, itemsRef.current.length) : itemsRef.current.length;
       
-      // Create main timeline with optimized settings
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: triggerRef.current,
-          start: "top top",
-          end: scrollDuration,
-          scrub: scrubStrength,
-          pin: true,
-          anticipatePin: 1,
-        }
-      });
-
       // Set initial states
       gsap.set(heroTextRef.current, { opacity: 1 });
       gsap.set(chaosTextRef.current, { opacity: 0, scale: 0.9 });
@@ -103,6 +92,25 @@ export const ChaosAnimation: React.FC = () => {
       };
       
       positionIcons();
+
+      if (prefersReducedMotion) {
+        gsap.set(itemsRef.current, { opacity: 0, scale: 0 });
+        gsap.set(dashboardRef.current, { scale: 1, opacity: 1 });
+        gsap.set(orderTextRef.current, { opacity: 0.2, scale: 1 });
+        return;
+      }
+
+      // Create main timeline with optimized settings
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: triggerRef.current,
+          start: "top top",
+          end: scrollDuration,
+          scrub: scrubStrength,
+          pin: !isMobile,
+          anticipatePin: 1,
+        }
+      });
 
       // --- SIMPLIFIED ANIMATION SEQUENCE ---
 
@@ -190,8 +198,6 @@ export const ChaosAnimation: React.FC = () => {
     // Cleanup function to prevent memory leaks
     return () => {
       ctx.revert();
-      // Kill any ScrollTrigger instances to prevent memory leaks
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     };
   }, [painPoints]);
 

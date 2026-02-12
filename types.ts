@@ -112,6 +112,8 @@ export interface Content {
       inputPlaceholder: string;
       quickReplies: string[]; 
       botTyping: string;
+      defaultResponse: string;
+      auditResponse: string;
     };
     links: {
       privacy: string;
