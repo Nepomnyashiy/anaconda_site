@@ -13,27 +13,26 @@
 
 Деплой выполняется workflow `.github/workflows/blank.yml`.
 
-Команда деплоя:
+Перед запуском `ansible-playbook` workflow:
+- создаёт SSH-ключ из секрета `DEPLOY_SSH_KEY`;
+- добавляет сервер в `known_hosts` через `ssh-keyscan`;
+- генерирует `ansible/inventory/hosts.ini` из secrets/переменных окружения;
+- запускает fail-fast проверки обязательных файлов и ролей.
 
-```bash
-ansible-playbook -i ansible/inventory/hosts.ini ansible/playbooks/site.yml
-```
+### Secrets для деплоя
 
-### Preflight-проверки в CI
+Для корректной работы деплоя нужно настроить следующие GitHub Secrets:
 
-Перед запуском Ansible workflow проверяет:
+- `DEPLOY_HOST` — адрес сервера (для прода: `31.59.106.120`);
+- `DEPLOY_USER` — SSH-пользователь (рекомендуется `deploy`);
+- `DEPLOY_SSH_KEY` — приватный SSH-ключ (multiline);
+- `DEPLOY_PORT` — SSH-порт (опционально, по умолчанию `22`).
+
+## Preflight-проверки в CI
+
+Перед деплоем workflow проверяет:
+- наличие `ansible/inventory/hosts.ini`;
 - наличие `ansible/playbooks/site.yml`;
-- наличие `ansible/inventory/hosts.ini`.
+- наличие ролей `ansible/roles/base`, `ansible/roles/deploy`, `ansible/roles/nginx`.
 
-Если `hosts.ini` отсутствует, но есть `ansible/inventory/hosts.ini.example`, CI создаёт `hosts.ini` из шаблона.
-Если нужных файлов нет — workflow завершается с понятной ошибкой.
-
-## Версионирование приложения
-
-Версия проекта хранится в `api/app/version.py` и должна использоваться API-эндпоинтом `/api/version`.
-
-Рекомендуемый процесс:
-1. Обновить версию в `api/app/version.py`.
-2. Выполнить commit.
-3. Создать git-тег вида `vX.Y.Z`.
-4. Отправить commit и тег в репозиторий.
+При отсутствии любого обязательного файла/каталога job завершается с понятной ошибкой на русском языке.

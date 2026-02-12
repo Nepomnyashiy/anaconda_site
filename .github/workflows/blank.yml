@@ -8,6 +8,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,41 +28,55 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible
 
-      - name: Проверка наличия файлов
+      - name: Создать inventory и SSH-конфигурацию из Secrets
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ ! -f ansible/playbooks/site.yml ]]; then
-            echo "Ошибка: не найден playbook ansible/playbooks/site.yml" >&2
-            exit 1
-          fi
+          # Проверяем обязательные секреты для генерации inventory.
+          test -n "${DEPLOY_HOST:-}" || (echo "Ошибка: не задан секрет DEPLOY_HOST" >&2 && exit 1)
+          test -n "${DEPLOY_USER:-}" || (echo "Ошибка: не задан секрет DEPLOY_USER" >&2 && exit 1)
+          test -n "${DEPLOY_SSH_KEY:-}" || (echo "Ошибка: не задан секрет DEPLOY_SSH_KEY" >&2 && exit 1)
 
-          if [[ ! -f ansible/inventory/hosts.ini ]]; then
-            echo "Ошибка: не найден ansible/inventory/hosts.ini. Деплой остановлен (fail-fast)." >&2
-            echo "Подготовьте корректный inventory перед запуском workflow." >&2
-            exit 1
-          fi
+          mkdir -p ansible/inventory
+          mkdir -p ~/.ssh
 
-      - name: Configure SSH key
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
+          # Записываем приватный ключ только во временную среду раннера.
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          # Добавляем отпечаток сервера в known_hosts для безопасного SSH.
+          ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+          # Генерируем inventory для продакшн-группы.
+          {
+            printf '[prod]
+'
+            printf 'server1 ansible_host=%s ansible_user=%s ansible_port=%s
+
+' "${DEPLOY_HOST}" "${DEPLOY_USER}" "${DEPLOY_PORT:-22}"
+            printf '[prod:vars]
+'
+            printf 'ansible_become=true
+'
+            printf 'ansible_become_method=sudo
+'
+          } > ansible/inventory/hosts.ini
+
+      - name: Проверка наличия файлов перед деплоем
+        shell: bash
         run: |
-          mkdir -p ansible/keys
-          echo "$SSH_PRIVATE_KEY" > ansible/keys/id_ed25519
-          chmod 600 ansible/keys/id_ed25519
+          set -euo pipefail
 
-      - name: Configure OpenRouter API key
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          mkdir -p ansible/keys
-          echo "$OPENROUTER_API_KEY" > ansible/keys/openrouter_anaconda.key
+          test -f ansible/inventory/hosts.ini || (echo "Ошибка: hosts.ini не создан" >&2 && exit 1)
+          test -f ansible/playbooks/site.yml || (echo "Ошибка: playbook не найден" >&2 && exit 1)
+          test -d ansible/roles/base || (echo "Ошибка: не найдена роль ansible/roles/base" >&2 && exit 1)
+          test -d ansible/roles/deploy || (echo "Ошибка: не найдена роль ansible/roles/deploy" >&2 && exit 1)
+          test -d ansible/roles/nginx || (echo "Ошибка: не найдена роль ansible/roles/nginx" >&2 && exit 1)
 
       - name: Deploy
         env:
           # Явно указываем конфиг из ansible/, чтобы Ansible видел roles_path
           # при запуске из корня репозитория в GitHub Actions.
           ANSIBLE_CONFIG: ansible/ansible.cfg
-          ANSIBLE_HOST_KEY_CHECKING: "False"
         run: ansible-playbook -i ansible/inventory/hosts.ini ansible/playbooks/site.yml
