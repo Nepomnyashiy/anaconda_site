@@ -22,6 +22,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible
 
+      - name: Проверка наличия файлов
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f ansible/playbooks/site.yml ]]; then
+            echo "Ошибка: не найден playbook ansible/playbooks/site.yml" >&2
+            exit 1
+          fi
+
+          if [[ ! -f ansible/inventory/hosts.ini ]]; then
+            if [[ -f ansible/inventory/hosts.ini.example ]]; then
+              cp ansible/inventory/hosts.ini.example ansible/inventory/hosts.ini
+              echo "hosts.ini отсутствовал, создан из hosts.ini.example для CI-проверки."
+            else
+              echo "Ошибка: не найден ansible/inventory/hosts.ini и отсутствует шаблон ansible/inventory/hosts.ini.example" >&2
+              exit 1
+            fi
+          fi
+
       - name: Configure SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
@@ -40,4 +60,4 @@ jobs:
       - name: Deploy
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml
+        run: ansible-playbook -i ansible/inventory/hosts.ini ansible/playbooks/site.yml
