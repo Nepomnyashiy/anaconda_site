@@ -22,6 +22,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible
 
+      - name: Configure inventory
+        env:
+          ANSIBLE_INVENTORY: ${{ secrets.ANSIBLE_INVENTORY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Inventory не хранится в репозитории, поэтому приоритетно берём
+          # его из GitHub Secret ANSIBLE_INVENTORY (многострочное содержимое hosts.ini).
+          if [[ -n "${ANSIBLE_INVENTORY:-}" ]]; then
+            mkdir -p ansible/inventory
+            printf '%s\n' "$ANSIBLE_INVENTORY" > ansible/inventory/hosts.ini
+            chmod 600 ansible/inventory/hosts.ini
+            echo "Inventory создан из GitHub Secret ANSIBLE_INVENTORY."
+          fi
+
       - name: Проверка наличия файлов
         shell: bash
         run: |
@@ -33,13 +49,9 @@ jobs:
           fi
 
           if [[ ! -f ansible/inventory/hosts.ini ]]; then
-            if [[ -f ansible/inventory/hosts.ini.example ]]; then
-              cp ansible/inventory/hosts.ini.example ansible/inventory/hosts.ini
-              echo "hosts.ini отсутствовал, создан из hosts.ini.example для CI-проверки."
-            else
-              echo "Ошибка: не найден ansible/inventory/hosts.ini и отсутствует шаблон ansible/inventory/hosts.ini.example" >&2
-              exit 1
-            fi
+            echo "Ошибка: не найден ansible/inventory/hosts.ini. Деплой остановлен (fail-fast)." >&2
+            echo "Укажите inventory в GitHub Secret ANSIBLE_INVENTORY или добавьте файл в окружении запуска." >&2
+            exit 1
           fi
 
       - name: Configure SSH key
@@ -59,5 +71,22 @@ jobs:
 
       - name: Deploy
         env:
+          # Явно указываем конфиг из ansible/, чтобы Ansible видел roles_path
+          # при запуске из корня репозитория в GitHub Actions.
+          ANSIBLE_CONFIG: ansible/ansible.cfg
+          # Приватный ключ для SSH-подключения к целевым хостам.
+          ANSIBLE_PRIVATE_KEY_FILE: ansible/keys/id_ed25519
+          # Опционально: пароль sudo/root из GitHub Secret ANSIBLE_BECOME_PASSWORD.
+          # Если не задан, деплой работает в режиме NOPASSWD sudo.
+          ANSIBLE_BECOME_PASSWORD: ${{ secrets.ANSIBLE_BECOME_PASSWORD }}
           ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: ansible-playbook -i ansible/inventory/hosts.ini ansible/playbooks/site.yml
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXTRA_VARS=()
+          if [[ -n "${ANSIBLE_BECOME_PASSWORD:-}" ]]; then
+            EXTRA_VARS+=(--extra-vars "ansible_become_password=${ANSIBLE_BECOME_PASSWORD}")
+          fi
+
+          ansible-playbook -i ansible/inventory/hosts.ini ansible/playbooks/site.yml "${EXTRA_VARS[@]}"

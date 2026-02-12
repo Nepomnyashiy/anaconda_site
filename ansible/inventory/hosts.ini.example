@@ -1,5 +1,11 @@
 [production]
-example.com ansible_user=deploy ansible_become=true
+# Основные данные подключения:
+# - ansible_user: SSH-пользователь (например, deploy или root)
+# - ansible_port: SSH-порт (по умолчанию 22)
+# - ansible_become=true: включить sudo для задач деплоя
+# - ansible_ssh_private_key_file: путь к приватному ключу (можно не указывать,
+#   если ключ уже задан через ANSIBLE_PRIVATE_KEY_FILE в CI)
+example.com ansible_user=deploy ansible_port=22 ansible_become=true ansible_ssh_private_key_file=ansible/keys/id_ed25519
 
 [production:vars]
 project_name=anaconda_site
@@ -8,3 +14,8 @@ deploy_dir=/opt/www-stack
 nginx_http_port=80
 compose_file_name=compose.prod.yml
 env_file_name=.env
+
+# Для входа по паролю (не рекомендуется хранить в Git):
+# ansible_password=<ssh_password>
+# ansible_become_password=<sudo_or_root_password>
+# Рекомендуемый вариант для CI: GitHub Secret ANSIBLE_BECOME_PASSWORD.
