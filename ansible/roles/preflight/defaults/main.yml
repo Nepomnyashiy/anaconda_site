@@ -1,0 +1,10 @@
+---
+# Позволяет отключать внешнюю DNS/HTTP-проверку репозитория,
+# например, в закрытых контурах (air-gap) через inventory/group_vars.
+preflight_check_repo_dns: true
+
+# Репозиторий по умолчанию определяется от дистрибутива.
+# Debian -> deb.debian.org, Ubuntu -> archive.ubuntu.com.
+# Для остальных систем оставляем archive.ubuntu.com как безопасный fallback.
+preflight_repo_host: >-
+  {{ 'deb.debian.org' if ansible_distribution == 'Debian' else 'archive.ubuntu.com' }}

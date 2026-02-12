@@ -4,29 +4,31 @@
   register: apt_check
   changed_when: false
 
-- name: Проверка DNS-доступности внешнего ресурса
-  ansible.builtin.command: getent hosts archive.ubuntu.com
+- name: Проверка DNS-доступности репозитория пакетов
+  ansible.builtin.command: "getent hosts {{ preflight_repo_host }}"
   register: dns_check
   changed_when: false
   failed_when: dns_check.rc != 0
-  when: not (air_gap_mode | default(false) | bool)
+  # Внешнюю проверку можно отключить через inventory: preflight_check_repo_dns=false
+  when: preflight_check_repo_dns | bool
 
-- name: Проверка HTTP-доступности репозитория Ubuntu
+- name: Проверка HTTP-доступности репозитория пакетов
   ansible.builtin.uri:
-    url: http://archive.ubuntu.com
+    url: "http://{{ preflight_repo_host }}"
     method: HEAD
     timeout: 5
     status_code: [200, 301, 302]
   register: http_check
   changed_when: false
-  when: not (air_gap_mode | default(false) | bool)
+  # Используем тот же переключатель, чтобы в air-gap полностью пропускать внешние проверки.
+  when: preflight_check_repo_dns | bool
 
 - name: TODO для изолированных окружений
   ansible.builtin.debug:
     msg: >-
-      Включён air_gap_mode=true. Проверки внешнего DNS/HTTP пропущены.
-      TODO: добавить проверку внутреннего зеркала пакетов.
-  when: air_gap_mode | default(false) | bool
+      Внешние DNS/HTTP-проверки отключены (preflight_check_repo_dns=false).
+      Используйте внутреннее зеркало пакетов в закрытом контуре.
+  when: not (preflight_check_repo_dns | bool)
 
 - name: Проверка установлен ли Docker
   ansible.builtin.command: docker --version
