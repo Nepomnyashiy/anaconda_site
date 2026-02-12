@@ -1,0 +1,8 @@
+---
+- name: Deploy www stack
+  hosts: www
+  become: true
+  roles:
+    - base
+    - deploy
+    - nginx
