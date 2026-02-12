@@ -1,0 +1,10 @@
+# Node / Next.js
+web/node_modules/
+web/.next/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
