@@ -1,0 +1,11 @@
+---
+- name: Проверить конфигурацию nginx
+  ansible.builtin.command: nginx -t
+  changed_when: false
+  listen: Проверить и перезагрузить nginx
+
+- name: Перезагрузить nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  listen: Проверить и перезагрузить nginx

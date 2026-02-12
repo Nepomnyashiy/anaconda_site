@@ -1,0 +1,10 @@
+[production]
+example.com ansible_user=deploy ansible_become=true
+
+[production:vars]
+project_name=anaconda_site
+domain=example.com
+deploy_dir=/opt/www-stack
+nginx_http_port=80
+compose_file_name=compose.prod.yml
+env_file_name=.env

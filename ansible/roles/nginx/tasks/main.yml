@@ -1,0 +1,29 @@
+---
+- name: Установить nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Создать конфигурацию сайта проекта
+  ansible.builtin.template:
+    src: project_site.conf.j2
+    dest: "/etc/nginx/sites-available/{{ project_name }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Проверить и перезагрузить nginx
+
+- name: Включить сайт проекта
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ project_name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ project_name }}.conf"
+    state: link
+    force: true
+  notify: Проверить и перезагрузить nginx
+
+- name: Отключить default-конфигурацию nginx
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Проверить и перезагрузить nginx

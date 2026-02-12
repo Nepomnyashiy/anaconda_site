@@ -1,0 +1,19 @@
+---
+- name: Установка Docker при отсутствии
+  when: docker_check.rc != 0
+  block:
+    - name: Обновить индекс пакетов apt
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Установить Docker Engine
+      ansible.builtin.apt:
+        name:
+          - docker.io
+        state: present
+
+    - name: Проверить Docker после установки
+      ansible.builtin.command: docker --version
+      register: docker_version_post_install
+      changed_when: false

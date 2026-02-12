@@ -1,0 +1,71 @@
+---
+- name: Продакшн-деплой проекта
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Проверка поддерживаемой операционной системы
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['distribution'] in ['Ubuntu', 'Debian']
+        fail_msg: >-
+          Неподдерживаемая ОС: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}.
+          Требуется Debian/Ubuntu (рекомендуется Ubuntu 24.04).
+
+    - name: Предупреждение о нерекомендованной версии Ubuntu
+      ansible.builtin.debug:
+        msg: >-
+          Обнаружена Ubuntu {{ ansible_facts['distribution_version'] }}.
+          Рекомендуемая версия для продакшн-окружения: Ubuntu 24.04.
+      when:
+        - ansible_facts['distribution'] == 'Ubuntu'
+        - ansible_facts['distribution_version'] != '24.04'
+
+    - name: Проверка доступности sudo
+      ansible.builtin.command: whoami
+      become: true
+      register: sudo_check
+      changed_when: false
+      failed_when: sudo_check.stdout | trim != 'root'
+
+    - name: Собрать обязательные переменные
+      ansible.builtin.set_fact:
+        required_vars_map:
+          project_name: "{{ project_name | default('') }}"
+          domain: "{{ domain | default('') }}"
+          deploy_dir: "{{ deploy_dir | default('') }}"
+          nginx_http_port: "{{ nginx_http_port | default('') }}"
+          compose_file_name: "{{ compose_file_name | default('') }}"
+          env_file_name: "{{ env_file_name | default('') }}"
+
+    - name: Определить отсутствующие обязательные переменные
+      ansible.builtin.set_fact:
+        missing_required_vars: >-
+          {{
+            required_vars_map
+            | dict2items
+            | selectattr('value', 'equalto', '')
+            | map(attribute='key')
+            | list
+          }}
+
+    - name: Проверка обязательных переменных
+      ansible.builtin.assert:
+        that:
+          - missing_required_vars | length == 0
+        fail_msg: >-
+          Отсутствуют обязательные переменные: {{ missing_required_vars | join(', ') }}.
+          Укажите их в inventory/group_vars перед запуском деплоя.
+
+    - name: Проверка/создание каталога деплоя
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+  roles:
+    - role: preflight
+    - role: base
+    - role: nginx

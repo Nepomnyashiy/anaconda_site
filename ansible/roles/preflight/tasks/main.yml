@@ -1,0 +1,35 @@
+---
+- name: Проверка доступности apt
+  ansible.builtin.command: apt-get -v
+  register: apt_check
+  changed_when: false
+
+- name: Проверка DNS-доступности внешнего ресурса
+  ansible.builtin.command: getent hosts archive.ubuntu.com
+  register: dns_check
+  changed_when: false
+  failed_when: dns_check.rc != 0
+  when: not (air_gap_mode | default(false) | bool)
+
+- name: Проверка HTTP-доступности репозитория Ubuntu
+  ansible.builtin.uri:
+    url: http://archive.ubuntu.com
+    method: HEAD
+    timeout: 5
+    status_code: [200, 301, 302]
+  register: http_check
+  changed_when: false
+  when: not (air_gap_mode | default(false) | bool)
+
+- name: TODO для изолированных окружений
+  ansible.builtin.debug:
+    msg: >-
+      Включён air_gap_mode=true. Проверки внешнего DNS/HTTP пропущены.
+      TODO: добавить проверку внутреннего зеркала пакетов.
+  when: air_gap_mode | default(false) | bool
+
+- name: Проверка установлен ли Docker
+  ansible.builtin.command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
