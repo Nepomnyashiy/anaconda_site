@@ -19,12 +19,17 @@ export const FooterForm: React.FC = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasMountedRef = useRef(false);
   const hasInitializedMessagesRef = useRef(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
   };
 
   useEffect(() => {
@@ -128,7 +133,10 @@ export const FooterForm: React.FC = () => {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50 custom-scrollbar">
+              <div
+                ref={messagesContainerRef}
+                className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50 custom-scrollbar"
+              >
                 {messages.map((msg) => (
                   <div 
                     key={msg.id} 
