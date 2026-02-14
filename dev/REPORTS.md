@@ -4,3 +4,5 @@
 - T-02 — завершено: исправлен путь playbook в CI, добавлены preflight-проверки Ansible, внедрён отдельный Nginx vhost под домен проекта, обновлена документация и dev-отчёт.
 
 - T-02.x — завершено: исправлен inventory для CI (генерация hosts.ini из GitHub Secrets), добавлены fail-fast проверки и подготовлена SSH-аутентификация ключом для сервера 31.59.106.120.
+
+- HOTFIX — завершено: добавлены `web/public/.gitkeep`, `.env.example` с минимальными переменными compose и обновлён `docs/DEPLOY.md`.
