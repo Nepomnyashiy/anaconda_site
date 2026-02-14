@@ -33,3 +33,21 @@ Workflow `.github/workflows/blank.yml` автоматически генерир
 - inventory в CI создаётся перед запуском Ansible;
 - SSH-аутентификация выполняется только ключом;
 - секреты не попадают в репозиторий и не должны выводиться в логи.
+
+## Переменные окружения для локального docker compose
+
+Для запуска `infra/compose.dev.yml` обязательно должны быть заданы переменные:
+
+- `NGINX_PORT`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+
+Пример минимального заполнения (`.env`):
+
+```env
+NGINX_PORT=80
+POSTGRES_DB=anaconda
+POSTGRES_USER=anaconda
+POSTGRES_PASSWORD=anaconda_password
+```
