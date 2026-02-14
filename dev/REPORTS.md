@@ -6,3 +6,4 @@
 - T-02.x — завершено: исправлен inventory для CI (генерация hosts.ini из GitHub Secrets), добавлены fail-fast проверки и подготовлена SSH-аутентификация ключом для сервера 31.59.106.120.
 
 - HOTFIX — завершено: добавлены `web/public/.gitkeep`, `.env.example` с минимальными переменными compose и обновлён `docs/DEPLOY.md`.
+- HOTFIX — завершено: исправлен YAML-синтаксис `.github/workflows/blank.yml` (ошибка строки 54), восстановлена валидность workflow.

@@ -50,17 +50,11 @@ jobs:
 
           # Генерируем inventory для продакшн-группы.
           {
-            printf '[prod]
-'
-            printf 'server1 ansible_host=%s ansible_user=%s ansible_port=%s
-
-' "${DEPLOY_HOST}" "${DEPLOY_USER}" "${DEPLOY_PORT:-22}"
-            printf '[prod:vars]
-'
-            printf 'ansible_become=true
-'
-            printf 'ansible_become_method=sudo
-'
+            printf '[prod]\n'
+            printf 'server1 ansible_host=%s ansible_user=%s ansible_port=%s\n\n' "${DEPLOY_HOST}" "${DEPLOY_USER}" "${DEPLOY_PORT:-22}"
+            printf '[prod:vars]\n'
+            printf 'ansible_become=true\n'
+            printf 'ansible_become_method=sudo\n'
           } > ansible/inventory/hosts.ini
 
       - name: Проверка наличия файлов перед деплоем
