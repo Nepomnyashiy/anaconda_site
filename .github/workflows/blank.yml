@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST || '31.59.106.120' }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -34,7 +34,8 @@ jobs:
           set -euo pipefail
 
           # Проверяем обязательные секреты для генерации inventory.
-          test -n "${DEPLOY_HOST:-}" || (echo "Ошибка: не задан секрет DEPLOY_HOST" >&2 && exit 1)
+          # DEPLOY_HOST берём из секрета, а при его отсутствии — из дефолта workflow.
+          test -n "${DEPLOY_HOST:-}" || (echo "Ошибка: DEPLOY_HOST не задан и дефолт не применился" >&2 && exit 1)
           test -n "${DEPLOY_USER:-}" || (echo "Ошибка: не задан секрет DEPLOY_USER" >&2 && exit 1)
           test -n "${DEPLOY_SSH_KEY:-}" || (echo "Ошибка: не задан секрет DEPLOY_SSH_KEY" >&2 && exit 1)
 
