@@ -9,13 +9,15 @@
 - `push` в `main`;
 - `push` тега формата `v*` (например, `v1.0.0`).
 
+Примечание: в workflow имена owner/repository для GHCR приводятся к нижнему регистру, чтобы избежать ошибки Docker `repository name must be lowercase`.
+
 ## Деплой через Ansible
 
 Деплой выполняется workflow `.github/workflows/blank.yml`.
 
 Перед запуском `ansible-playbook` workflow:
 - создаёт SSH-ключ из секрета `DEPLOY_SSH_KEY`;
-- добавляет сервер в `known_hosts` через `ssh-keyscan`;
+- добавляет сервер в `known_hosts` через `ssh-keyscan` (с учётом `DEPLOY_PORT`);
 - генерирует `ansible/inventory/hosts.ini` из secrets/переменных окружения;
 - запускает fail-fast проверки обязательных файлов и ролей.
 
@@ -23,10 +25,10 @@
 
 Для корректной работы деплоя нужно настроить следующие GitHub Secrets:
 
-- `DEPLOY_HOST` — адрес сервера (для прода: `31.59.106.120`);
-- `DEPLOY_USER` — SSH-пользователь (рекомендуется `deploy`);
+- `DEPLOY_HOST` — адрес сервера (опционально, по умолчанию `31.59.106.120`);
+- `DEPLOY_USER` — SSH-пользователь (опционально, по умолчанию `deploy`);
 - `DEPLOY_SSH_KEY` — приватный SSH-ключ (multiline);
-- `DEPLOY_PORT` — SSH-порт (опционально, по умолчанию `22`).
+- `DEPLOY_PORT` — SSH-порт (опционально, по умолчанию `22`, проверяется в CI как число в диапазоне `1..65535`).
 
 ## Preflight-проверки в CI
 
@@ -36,3 +38,7 @@
 - наличие ролей `ansible/roles/base`, `ansible/roles/deploy`, `ansible/roles/nginx`.
 
 При отсутствии любого обязательного файла/каталога job завершается с понятной ошибкой на русском языке.
+
+### Совместимость Ansible callback
+
+В `ansible/ansible.cfg` используется `stdout_callback = ansible.builtin.default` и `result_format = yaml`, чтобы избежать ошибки про удалённый callback `community.general.yaml` в новых версиях `community.general`.
