@@ -9,6 +9,8 @@
 - `push` в `main`;
 - `push` тега формата `v*` (например, `v1.0.0`).
 
+Примечание: в workflow имена owner/repository для GHCR приводятся к нижнему регистру, чтобы избежать ошибки Docker `repository name must be lowercase`.
+
 ## Деплой через Ansible
 
 Деплой выполняется workflow `.github/workflows/blank.yml`.
