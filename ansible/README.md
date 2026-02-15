@@ -17,7 +17,7 @@ This directory contains the Ansible playbooks to deploy the Anaconda Site to the
 
 2. Run the Ansible playbook:
    ```bash
-   ansible-playbook -i inventory/hosts.ini site.yml
+   ansible-playbook -i ansible/inventory/hosts.ini ansible/playbooks/site.yml
    ```
 
 ## What the Playbook Does
