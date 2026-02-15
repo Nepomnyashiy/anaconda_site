@@ -39,3 +39,7 @@
 - наличие ролей `ansible/roles/base`, `ansible/roles/deploy`, `ansible/roles/nginx`.
 
 При отсутствии любого обязательного файла/каталога job завершается с понятной ошибкой на русском языке.
+
+### Совместимость Ansible callback
+
+В `ansible/ansible.cfg` используется `stdout_callback = ansible.builtin.default` и `result_format = yaml`, чтобы избежать ошибки про удалённый callback `community.general.yaml` в новых версиях `community.general`.
