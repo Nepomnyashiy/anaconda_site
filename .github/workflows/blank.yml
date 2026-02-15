@@ -10,7 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_HOST_DEFAULT: 31.59.106.120
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_USER_DEFAULT: deploy
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
 
@@ -33,9 +35,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # DEPLOY_HOST: берём из секрета, а при его отсутствии используем дефолтный IP.
+          DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST_DEFAULT}}"
+          # DEPLOY_USER: берём из секрета, а при его отсутствии используем дефолтного пользователя.
+          DEPLOY_USER="${DEPLOY_USER:-${DEPLOY_USER_DEFAULT}}"
+
           # Проверяем обязательные секреты для генерации inventory.
-          test -n "${DEPLOY_HOST:-}" || (echo "Ошибка: не задан секрет DEPLOY_HOST" >&2 && exit 1)
-          test -n "${DEPLOY_USER:-}" || (echo "Ошибка: не задан секрет DEPLOY_USER" >&2 && exit 1)
+          test -n "${DEPLOY_HOST:-}" || (echo "Ошибка: DEPLOY_HOST пустой" >&2 && exit 1)
+          test -n "${DEPLOY_USER:-}" || (echo "Ошибка: DEPLOY_USER пустой" >&2 && exit 1)
           test -n "${DEPLOY_SSH_KEY:-}" || (echo "Ошибка: не задан секрет DEPLOY_SSH_KEY" >&2 && exit 1)
 
           mkdir -p ansible/inventory
