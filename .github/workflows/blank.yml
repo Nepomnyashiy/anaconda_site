@@ -14,6 +14,7 @@ jobs:
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_USER_DEFAULT: deploy
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_PORT_DEFAULT: 22
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
 
     steps:
@@ -39,11 +40,23 @@ jobs:
           DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST_DEFAULT}}"
           # DEPLOY_USER: берём из секрета, а при его отсутствии используем дефолтного пользователя.
           DEPLOY_USER="${DEPLOY_USER:-${DEPLOY_USER_DEFAULT}}"
+          # DEPLOY_PORT: берём из секрета, а при его отсутствии используем 22.
+          DEPLOY_PORT="${DEPLOY_PORT:-${DEPLOY_PORT_DEFAULT}}"
 
           # Проверяем обязательные секреты для генерации inventory.
           test -n "${DEPLOY_HOST:-}" || (echo "Ошибка: DEPLOY_HOST пустой" >&2 && exit 1)
           test -n "${DEPLOY_USER:-}" || (echo "Ошибка: DEPLOY_USER пустой" >&2 && exit 1)
           test -n "${DEPLOY_SSH_KEY:-}" || (echo "Ошибка: не задан секрет DEPLOY_SSH_KEY" >&2 && exit 1)
+
+          if ! [[ "${DEPLOY_PORT}" =~ ^[0-9]+$ ]]; then
+            echo "Ошибка: DEPLOY_PORT должен быть числом, получено: ${DEPLOY_PORT}" >&2
+            exit 1
+          fi
+
+          if (( DEPLOY_PORT < 1 || DEPLOY_PORT > 65535 )); then
+            echo "Ошибка: DEPLOY_PORT вне диапазона 1..65535, получено: ${DEPLOY_PORT}" >&2
+            exit 1
+          fi
 
           mkdir -p ansible/inventory
           mkdir -p ~/.ssh
@@ -53,12 +66,12 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
 
           # Добавляем отпечаток сервера в known_hosts для безопасного SSH.
-          ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 10 -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
           # Генерируем inventory для продакшн-группы.
           {
             printf '[prod]\n'
-            printf 'server1 ansible_host=%s ansible_user=%s ansible_port=%s\n\n' "${DEPLOY_HOST}" "${DEPLOY_USER}" "${DEPLOY_PORT:-22}"
+            printf 'server1 ansible_host=%s ansible_user=%s ansible_port=%s\n\n' "${DEPLOY_HOST}" "${DEPLOY_USER}" "${DEPLOY_PORT}"
             printf '[prod:vars]\n'
             printf 'ansible_become=true\n'
             printf 'ansible_become_method=sudo\n'
