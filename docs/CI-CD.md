@@ -9,6 +9,8 @@
 - `push` в `main`;
 - `push` тега формата `v*` (например, `v1.0.0`).
 
+Примечание: в workflow имена owner/repository для GHCR приводятся к нижнему регистру, чтобы избежать ошибки Docker `repository name must be lowercase`.
+
 ## Деплой через Ansible
 
 Деплой выполняется workflow `.github/workflows/blank.yml`.
@@ -23,7 +25,7 @@
 
 Для корректной работы деплоя нужно настроить следующие GitHub Secrets:
 
-- `DEPLOY_HOST` — адрес сервера (для прода: `31.59.106.120`);
+- `DEPLOY_HOST` — адрес сервера (опционально, по умолчанию `31.59.106.120`);
 - `DEPLOY_USER` — SSH-пользователь (рекомендуется `deploy`);
 - `DEPLOY_SSH_KEY` — приватный SSH-ключ (multiline);
 - `DEPLOY_PORT` — SSH-порт (опционально, по умолчанию `22`).
