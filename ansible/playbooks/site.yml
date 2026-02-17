@@ -68,4 +68,5 @@
   roles:
     - role: preflight
     - role: base
+    - role: deploy
     - role: nginx
