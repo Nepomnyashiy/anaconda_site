@@ -49,19 +49,14 @@ jobs:
           ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
           # Генерируем inventory для продакшн-группы.
-          {
-            printf '[prod]
-'
-            printf 'server1 ansible_host=%s ansible_user=%s ansible_port=%s
-
-' "${DEPLOY_HOST}" "${DEPLOY_USER}" "${DEPLOY_PORT:-22}"
-            printf '[prod:vars]
-'
-            printf 'ansible_become=true
-'
-            printf 'ansible_become_method=sudo
-'
-          } > ansible/inventory/hosts.ini
+          printf '%s\n' \
+            '[prod]' \
+            "server1 ansible_host=${DEPLOY_HOST} ansible_user=${DEPLOY_USER} ansible_port=${DEPLOY_PORT:-22}" \
+            '' \
+            '[prod:vars]' \
+            'ansible_become=true' \
+            'ansible_become_method=sudo' \
+            > ansible/inventory/hosts.ini
 
       - name: Проверка наличия файлов перед деплоем
         shell: bash
