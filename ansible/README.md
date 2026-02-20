@@ -20,6 +20,22 @@ This directory contains the Ansible playbooks to deploy the Anaconda Site to the
    ansible-playbook -i ansible/inventory/hosts.ini ansible/playbooks/site.yml
    ```
 
+## CI/CD (GitHub Actions)
+
+Automatic deployment runs on every push to the `main` branch via GitHub Actions.
+
+### Required repository secrets
+
+Add the following secret in the repository settings:
+
+- `ANSIBLE_SSH_KEY`: the private SSH key used to connect to the server (contents of `id_ed25519`).
+
+The workflow writes this key to `ansible/keys/id_ed25519` and runs:
+
+```bash
+ansible-playbook -i ansible/inventory/hosts.ini ansible/site.yml
+```
+
 ## What the Playbook Does
 
 1. Prepares the server (installs packages, configures firewall)
