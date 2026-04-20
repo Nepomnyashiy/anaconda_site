@@ -1,6 +1,0 @@
-[prod]
-server1 ansible_host=31.59.106.120 ansible_user=deploy ansible_port=22
-
-[prod:vars]
-ansible_become=true
-ansible_become_method=sudo

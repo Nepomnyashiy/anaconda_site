@@ -1,1 +1,22 @@
-ansible/inventory/hosts.ini
+.DS_Store
+.env
+.env.local
+.env.prod
+.env.prod.local
+.pytest_cache/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+web/tsconfig.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+dist/
+infra/keys/id_ed25519
+infra/ansible/group_vars/prod/vault.yml
+infra/ansible/.vault_pass.txt
+references/
+dev/Анализ рынка для экспансии платформы «Anaconda».pdf
