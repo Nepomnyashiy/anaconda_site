@@ -1,11 +1,12 @@
 import os
+from uuid import uuid4
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.models import LeadCreate, LeadResponse
-from app.repository import PostgresLeadRepository
+from app.models import LeadCreate, LeadResponse, SessionCreate, SessionResponse, AnalyticsEventCreate, AnalyticsEventResponse, WebhookCreate, WebhookResponse
+from app.repository import PostgresLeadRepository, PostgresSessionRepository, PostgresAnalyticsRepository, PostgresWebhookRepository
 
 
 def get_allowed_origins() -> list[str]:
@@ -22,6 +23,9 @@ async def lifespan(app: FastAPI):
     if not database_url:
         raise RuntimeError("DATABASE_URL is not set")
     app.state.leads = PostgresLeadRepository(database_url)
+    app.state.sessions = PostgresSessionRepository(database_url)
+    app.state.analytics = PostgresAnalyticsRepository(database_url)
+    app.state.webhooks = PostgresWebhookRepository(database_url)
     yield
 
 
@@ -48,3 +52,34 @@ def create_lead(payload: LeadCreate, request: Request):
     except Exception as exc:  # pragma: no cover - defensive API guard
         raise HTTPException(status_code=500, detail="Unable to persist lead") from exc
     return LeadResponse(id=str(record.id), submitted_at=record.submitted_at)
+
+@app.post("/api/v1/sessions", response_model=SessionResponse, status_code=201)
+def create_session(payload: SessionCreate, request: Request):
+    try:
+        record = request.app.state.sessions.create(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unable to create session") from exc
+    return SessionResponse(id=str(record.id), started_at=record.started_at, page=record.page)
+
+
+@app.post("/api/v1/analytics", response_model=AnalyticsEventResponse, status_code=201)
+def create_analytics_event(payload: AnalyticsEventCreate, request: Request):
+    try:
+        record = request.app.state.analytics.create(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unable to create analytics event") from exc
+    return AnalyticsEventResponse(id=str(record.id), event_type=record.event_type, created_at=record.created_at)
+
+
+@app.post("/api/v1/webhooks", response_model=WebhookResponse, status_code=201)
+def create_webhook(payload: WebhookCreate, request: Request):
+    try:
+        record = request.app.state.webhooks.create(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unable to process webhook") from exc
+    return WebhookResponse(id=str(record.id), event=record.event, processed_at=record.processed_at, status=record.status)
+
+@app.post("/api/v1/demo-sessions", status_code=201)
+def create_demo_session(request: Request):
+    # Simulate demo session creation
+    return {"message": "Demo session created", "session_id": str(uuid4())}

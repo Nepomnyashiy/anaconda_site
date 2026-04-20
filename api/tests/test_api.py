@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.main import app as production_app
-from app.models import LeadCreate
+from app.models import AnalyticsEventCreate, LeadCreate, SessionCreate, WebhookCreate
 
 
 class InMemoryLeadRepository:
@@ -23,10 +23,53 @@ class InMemoryLeadRepository:
         return record
 
 
+class InMemorySessionRepository:
+    def create(self, session: SessionCreate):
+        return type(
+            "SessionRecord",
+            (),
+            {
+                "id": uuid4(),
+                "started_at": datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "page": session.page,
+            },
+        )()
+
+
+class InMemoryAnalyticsRepository:
+    def create(self, event: AnalyticsEventCreate):
+        return type(
+            "AnalyticsEventRecord",
+            (),
+            {
+                "id": uuid4(),
+                "event_type": event.event_type,
+                "created_at": datetime(2024, 1, 1, tzinfo=timezone.utc),
+            },
+        )()
+
+
+class InMemoryWebhookRepository:
+    def create(self, webhook: WebhookCreate):
+        return type(
+            "WebhookRecord",
+            (),
+            {
+                "id": uuid4(),
+                "event": webhook.event,
+                "processed_at": datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "status": "processed",
+            },
+        )()
+
+
 def create_test_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.leads = InMemoryLeadRepository()
+        app.state.sessions = InMemorySessionRepository()
+        app.state.analytics = InMemoryAnalyticsRepository()
+        app.state.webhooks = InMemoryWebhookRepository()
         yield
 
     test_app = FastAPI(lifespan=lifespan)
@@ -73,3 +116,60 @@ def test_create_lead_requires_consent():
             },
         )
         assert response.status_code == 422
+
+def test_create_session():
+    with TestClient(create_test_app()) as client:
+        response = client.post(
+            "/api/v1/sessions",
+            json={
+                "page": "landing",
+                "user_agent": "Test Agent",
+                "ip_address": "127.0.0.1"
+            }
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert data["page"] == "landing"
+
+
+def test_create_analytics_event():
+    with TestClient(create_test_app()) as client:
+        response = client.post(
+            "/api/v1/analytics",
+            json={
+                "event_type": "page_view",
+                "event_data": {"page": "landing"},
+                "page": "landing"
+            }
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert data["event_type"] == "page_view"
+
+
+def test_create_webhook():
+    with TestClient(create_test_app()) as client:
+        response = client.post(
+            "/api/v1/webhooks",
+            json={
+                "event": "lead_created",
+                "payload": {"lead_id": "123"},
+                "source": "crm"
+            }
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert data["event"] == "lead_created"
+        assert data["status"] == "processed"
+
+
+def test_create_demo_session():
+    with TestClient(create_test_app()) as client:
+        response = client.post("/api/v1/demo-sessions")
+        assert response.status_code == 201
+        data = response.json()
+        assert "session_id" in data
+        assert "message" in data

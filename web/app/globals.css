@@ -2,80 +2,233 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-  --background: #04130c;
-  --surface: rgba(10, 31, 20, 0.78);
-  --surface-strong: rgba(9, 24, 16, 0.94);
-  --text: #effff4;
-  --muted: rgba(239, 255, 244, 0.7);
-  --border: rgba(120, 222, 145, 0.16);
-}
+@layer base {
+  :root {
+    /* ========== LEVEL 1: PRIMITIVE TOKENS ========== */
 
-* {
-  box-sizing: border-box;
-}
+    /* -- Core Colors -- */
+    --color-neutral-0: #FFFFFF;
+    --color-neutral-50: #F9FAFB;
+    --color-neutral-100: #F3F4F6;
+    --color-neutral-200: #E5E7EB;
+    --color-neutral-300: #D1D5DB;
+    --color-neutral-400: #9CA3AF;
+    --color-neutral-500: #6B7280;
+    --color-neutral-600: #4B5563;
+    --color-neutral-700: #374151;
+    --color-neutral-800: #1F2937;
+    --color-neutral-900: #111827;
+    --color-neutral-950: #050507;
 
-html {
-  scroll-behavior: smooth;
-}
+    --color-emerald-50: #F0FDFA;
+    --color-emerald-100: #CCFBF1;
+    --color-emerald-200: #99F6E4;
+    --color-emerald-300: #5EEAD4;
+    --color-emerald-400: #2BE0CC;
+    --color-emerald-500: #00E5D1;
+    --color-emerald-600: #14B8A6;
+    --color-emerald-700: #0D9488;
+    --color-emerald-800: #0F766E;
+    --color-emerald-900: #134E4A;
+    --color-emerald-950: #0A3432;
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(125, 232, 154, 0.18), transparent 24%),
-    radial-gradient(circle at 85% 10%, rgba(74, 170, 96, 0.16), transparent 22%),
-    radial-gradient(circle at 50% 100%, rgba(167, 255, 189, 0.08), transparent 26%),
-    linear-gradient(180deg, #04130c 0%, #061a10 34%, #07110d 100%);
-  color: var(--text);
-  font-family: "Avenir Next", "Segoe UI", "Inter", ui-sans-serif, system-ui, sans-serif;
-  background-attachment: fixed;
-}
+    --color-violet-50: #FAF5FF;
+    --color-violet-100: #F3E8FF;
+    --color-violet-200: #E9D5FF;
+    --color-violet-300: #D8B4FE;
+    --color-violet-400: #C084FC;
+    --color-violet-500: #8B5CF6;
+    --color-violet-600: #7C3AED;
+    --color-violet-700: #6D28D9;
+    --color-violet-800: #5B21B6;
+    --color-violet-900: #4C1D95;
+    --color-violet-950: #2E1065;
 
-input,
-textarea,
-button {
-  font: inherit;
-}
+    --color-blue-500: #0EA5E9;
+    --color-blue-600: #0284C7;
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+    --color-red-500: #EF4444;
+    --color-red-600: #DC2626;
 
-::selection {
-  background: rgba(125, 232, 154, 0.32);
-}
+    --color-green-500: #22C55E;
+    --color-green-600: #16A34A;
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
-  background-size: 120px 120px;
-  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.62), transparent 88%);
-  opacity: 0.65;
-}
+    --color-amber-500: #F59E0B;
+    --color-amber-600: #D97706;
 
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(236, 255, 241, 0.04), transparent 14%, transparent 86%, rgba(236, 255, 241, 0.04));
-  mix-blend-mode: screen;
-}
+    /* ========== LEVEL 2: SEMANTIC TOKENS ========== */
 
-.text-muted {
-  color: var(--muted);
-}
+    /* -- Background Colors -- */
+    --color-bg-primary: theme(colors.neutral.950);
+    --color-bg-secondary: theme(colors.neutral.900);
+    --color-bg-elevated: theme(colors.neutral.800);
+    --color-bg-overlay: rgba(5, 5, 7, 0.85);
+    --color-bg-glass: rgba(20, 24, 32, 0.40);
 
-@media (prefers-reduced-motion: reduce) {
+    /* -- Text Colors -- */
+    --color-text-primary: theme(colors.neutral.50);
+    --color-text-secondary: theme(colors.neutral.300);
+    --color-text-tertiary: theme(colors.neutral.500);
+    --color-text-disabled: theme(colors.neutral.700);
+    --color-text-accent: theme(colors.emerald.500);
+
+    /* -- Border Colors -- */
+    --color-border-default: theme(colors.neutral.800);
+    --color-border-strong: theme(colors.neutral.700);
+    --color-border-accent: theme(colors.emerald.500);
+
+    /* -- Accent Colors -- */
+    --color-accent-primary: theme(colors.emerald.500);
+    --color-accent-secondary: theme(colors.violet.500);
+
+    /* -- Status Colors -- */
+    --color-status-success: theme(colors.green.500);
+    --color-status-error: theme(colors.red.500);
+    --color-status-warning: theme(colors.amber.500);
+    --color-status-info: theme(colors.blue.500);
+
+    /* -- Interactive States -- */
+    --color-interactive-hover: rgba(255, 255, 255, 0.08);
+    --color-interactive-active: rgba(255, 255, 255, 0.12);
+    --color-interactive-focus: rgba(0, 229, 209, 0.2);
+    --color-interactive-disabled: rgba(255, 255, 255, 0.04);
+
+    /* ========== LEVEL 3: COMPONENT TOKENS ========== */
+
+    /* -- Button -- */
+    --button-primary-bg: var(--color-emerald-500);
+    --button-primary-text: var(--color-neutral-950);
+    --button-primary-hover-bg: var(--color-emerald-400);
+    --button-primary-active-bg: var(--color-emerald-600);
+
+    --button-secondary-bg: var(--color-interactive-hover);
+    --button-secondary-text: var(--color-text-primary);
+    --button-secondary-border: var(--color-border-default);
+
+    --button-ghost-bg: transparent;
+    --button-ghost-text: var(--color-text-primary);
+    --button-ghost-border: var(--color-border-default);
+
+    /* -- Card -- */
+    --card-bg: rgba(20, 24, 32, 0.40);
+    --card-border: rgba(0, 229, 209, 0.12);
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 10px 13px rgba(0, 0, 0, 0.05);
+    --card-shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+
+    /* -- Input -- */
+    --input-bg: rgba(255, 255, 255, 0.02);
+    --input-border: var(--color-border-default);
+    --input-border-focus: var(--color-accent-primary);
+    --input-text: var(--color-text-primary);
+    --input-placeholder: var(--color-text-tertiary);
+
+    /* -- Modal -- */
+    --modal-overlay-bg: rgba(0, 0, 0, 0.8);
+    --modal-backdrop-blur: blur(24px);
+    --modal-content-bg: rgba(20, 24, 32, 0.95);
+
+    /* -- Navbar -- */
+    --navbar-bg: rgba(5, 5, 7, 0.8);
+    --navbar-border: rgba(0, 229, 209, 0.1);
+    --navbar-height-desktop: 72px;
+    --navbar-height-desktop-scrolled: 60px;
+
+    /* ========== TYPOGRAPHY ========== */
+
+    --font-family-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-family-display: "Space Grotesk", "Inter", sans-serif;
+    --font-family-mono: "JetBrains Mono", ui-monospace, monospace;
+
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+
+    /* ========== SPACING ========== */
+
+    --space-container-x-mobile: 16px;
+    --space-container-x-tablet: 24px;
+    --space-container-x-desktop: 32px;
+
+    --space-section-y-mobile: 48px;
+    --space-section-y-tablet: 64px;
+    --space-section-y-desktop: 96px;
+
+    --grid-gutter-mobile: 16px;
+    --grid-gutter-tablet: 24px;
+    --grid-gutter-desktop: 32px;
+
+    /* ========== EFFECTS ========== */
+
+    --blur-sm: 16px;
+    --blur-md: 24px;
+    --blur-lg: 40px;
+
+    --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-small: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-medium: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-large: 0 20px 25px rgba(0, 0, 0, 0.1);
+
+    --glow-emerald-subtle: 0 0 12px rgba(0, 229, 209, 0.35);
+    --glow-emerald-medium: 0 0 20px rgba(0, 229, 209, 0.5), 0 0 40px rgba(0, 229, 209, 0.25);
+    --glow-emerald-strong: 0 0 30px rgba(0, 229, 209, 0.6), 0 0 60px rgba(0, 229, 209, 0.3);
+
+    /* ========== MOTION ========== */
+
+    --duration-fast: 200ms;
+    --duration-normal: 300ms;
+    --duration-slow: 500ms;
+
+    --easing-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --easing-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  /* ============================================
+     BASE STYLES
+     ============================================ */
+
+  * {
+    border-color: var(--color-border-default);
+  }
+
   html {
-    scroll-behavior: auto;
+    @apply scroll-smooth;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-sans);
+    background-attachment: fixed; /* This is a specific style that doesn't map well to a token */
+  }
+
+  /* ============================================
+     SELECTION & SCROLLBAR
+     ============================================ */
+
+  ::selection {
+    background: rgba(0, 229, 209, 0.3);
+    color: var(--color-text-primary);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-primary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-800);
+    border-radius: 9999px;
+    border: 2px solid var(--color-bg-primary);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-neutral-700);
   }
 }
