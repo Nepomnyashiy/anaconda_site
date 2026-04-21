@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: web/package.json
+          cache-dependency-path: web/package-lock.json
       - run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
       - run: npm run lint
       - run: npm run typecheck
@@ -88,6 +88,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve production paths
+        env:
+          PROD_APP_ROOT: ${{ vars.PROD_APP_ROOT }}
+          PROD_PUBLIC_URL: ${{ vars.PROD_PUBLIC_URL }}
+          PROD_API_HEALTH_URL: ${{ vars.PROD_API_HEALTH_URL }}
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+        run: |
+          echo "APP_ROOT=${PROD_APP_ROOT:-/opt/anaconda-site}" >> "$GITHUB_ENV"
+          echo "PUBLIC_URL=${PROD_PUBLIC_URL:-http://${PROD_HOST}/}" >> "$GITHUB_ENV"
+          echo "API_HEALTH_URL=${PROD_API_HEALTH_URL:-http://${PROD_HOST}/api/v1/health}" >> "$GITHUB_ENV"
+
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -105,8 +116,8 @@ jobs:
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
           RELEASE_ID: ${{ github.sha }}
         run: |
-          ssh "${PROD_USER}@${PROD_HOST}" "mkdir -p /opt/anaconda-site/releases/${RELEASE_ID} /opt/anaconda-site/shared/env"
-          printf '%s' "${PROD_ENV_FILE}" | ssh "${PROD_USER}@${PROD_HOST}" "cat > /opt/anaconda-site/shared/env/.env.prod"
+          ssh "${PROD_USER}@${PROD_HOST}" "mkdir -p ${APP_ROOT}/releases/${RELEASE_ID} ${APP_ROOT}/shared/env"
+          printf '%s' "${PROD_ENV_FILE}" | ssh "${PROD_USER}@${PROD_HOST}" "cat > ${APP_ROOT}/shared/env/.env.prod"
           tar \
             --exclude=.git \
             --exclude=.github \
@@ -122,5 +133,23 @@ jobs:
             --exclude=.env \
             --exclude=.env.prod \
             --exclude=infra/keys/id_ed25519 \
-            -czf - . | ssh "${PROD_USER}@${PROD_HOST}" "tar -xzf - -C /opt/anaconda-site/releases/${RELEASE_ID}"
-          ssh "${PROD_USER}@${PROD_HOST}" "APP_ROOT=/opt/anaconda-site RELEASE_ID=${RELEASE_ID} /bin/bash /opt/anaconda-site/releases/${RELEASE_ID}/infra/scripts/deploy_remote.sh"
+            -czf - . | ssh "${PROD_USER}@${PROD_HOST}" "tar -xzf - -C ${APP_ROOT}/releases/${RELEASE_ID}"
+          ssh "${PROD_USER}@${PROD_HOST}" "APP_ROOT=${APP_ROOT} RELEASE_ID=${RELEASE_ID} /bin/bash ${APP_ROOT}/releases/${RELEASE_ID}/infra/scripts/deploy_remote.sh"
+
+      - name: Verify production endpoints
+        run: |
+          curl -fsS "${PUBLIC_URL}" >/tmp/prod-site.html
+          curl -fsS "${API_HEALTH_URL}" >/tmp/prod-api-health.json
+
+      - name: Summarize deployment
+        env:
+          RELEASE_ID: ${{ github.sha }}
+        run: |
+          {
+            echo "## Production Deploy"
+            echo
+            echo "- Release: \`${RELEASE_ID}\`"
+            echo "- App root: \`${APP_ROOT}\`"
+            echo "- Site: \`${PUBLIC_URL}\`"
+            echo "- Health: \`${API_HEALTH_URL}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

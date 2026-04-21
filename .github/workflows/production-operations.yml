@@ -1,0 +1,246 @@
+name: Production Operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Operation to run on production
+        required: true
+        default: status
+        type: choice
+        options:
+          - status
+          - deploy
+          - rollback
+      ref:
+        description: Git ref to deploy when operation=deploy
+        required: false
+        default: main
+        type: string
+      release_id:
+        description: Release ID to rollback to when operation=rollback
+        required: false
+        type: string
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  status:
+    if: inputs.operation == 'status'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PROD_HOST: ${{ secrets.PROD_HOST }}
+      PROD_USER: ${{ secrets.PROD_USER }}
+      APP_ROOT: ${{ vars.PROD_APP_ROOT }}
+      PUBLIC_URL: ${{ vars.PROD_PUBLIC_URL }}
+      API_HEALTH_URL: ${{ vars.PROD_API_HEALTH_URL }}
+    steps:
+      - name: Resolve production settings
+        run: |
+          echo "APP_ROOT=${APP_ROOT:-/opt/anaconda-site}" >> "$GITHUB_ENV"
+          echo "PUBLIC_URL=${PUBLIC_URL:-http://${PROD_HOST}/}" >> "$GITHUB_ENV"
+          echo "API_HEALTH_URL=${API_HEALTH_URL:-http://${PROD_HOST}/api/v1/health}" >> "$GITHUB_ENV"
+
+      - name: Validate required secrets
+        run: |
+          test -n "${PROD_HOST}" || (echo "PROD_HOST is required" && exit 1)
+          test -n "${PROD_USER}" || (echo "PROD_USER is required" && exit 1)
+          test -n "${{ secrets.PROD_SSH_PRIVATE_KEY }}" || (echo "PROD_SSH_PRIVATE_KEY is required" && exit 1)
+
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Trust production host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${PROD_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Gather current production status
+        run: |
+          ssh "${PROD_USER}@${PROD_HOST}" "APP_ROOT=${APP_ROOT} /bin/bash -s" <<'EOF' > /tmp/prod-status.txt
+          set -euo pipefail
+          CURRENT_LINK="${APP_ROOT}/current"
+          ENV_PATH="${APP_ROOT}/shared/env/.env.prod"
+          if [[ -L "$CURRENT_LINK" ]]; then
+            echo "current_release_dir: $(readlink -f "$CURRENT_LINK")"
+          else
+            echo "current_release_dir: <none>"
+          fi
+          echo
+          if [[ -f "$ENV_PATH" && -f "${CURRENT_LINK}/compose.prod.yml" ]]; then
+            docker compose -f "${CURRENT_LINK}/compose.prod.yml" --env-file "$ENV_PATH" ps
+          else
+            echo "compose or env not found for current release"
+          fi
+          echo
+          echo "api_health:"
+          curl -fsS http://127.0.0.1:8000/api/v1/health || true
+          EOF
+          cat /tmp/prod-status.txt
+
+      - name: Verify public endpoints
+        run: |
+          curl -fsS "${PUBLIC_URL}" >/tmp/prod-site.html
+          curl -fsS "${API_HEALTH_URL}" >/tmp/prod-api-health.json
+
+      - name: Summarize status
+        run: |
+          {
+            echo "## Production Status"
+            echo
+            echo "- Site: \`${PUBLIC_URL}\`"
+            echo "- Health: \`${API_HEALTH_URL}\`"
+            echo
+            echo '```text'
+            cat /tmp/prod-status.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    if: inputs.operation == 'deploy'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PROD_HOST: ${{ secrets.PROD_HOST }}
+      PROD_USER: ${{ secrets.PROD_USER }}
+      PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+      APP_ROOT: ${{ vars.PROD_APP_ROOT }}
+      PUBLIC_URL: ${{ vars.PROD_PUBLIC_URL }}
+      API_HEALTH_URL: ${{ vars.PROD_API_HEALTH_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Resolve production settings
+        run: |
+          echo "APP_ROOT=${APP_ROOT:-/opt/anaconda-site}" >> "$GITHUB_ENV"
+          echo "PUBLIC_URL=${PUBLIC_URL:-http://${PROD_HOST}/}" >> "$GITHUB_ENV"
+          echo "API_HEALTH_URL=${API_HEALTH_URL:-http://${PROD_HOST}/api/v1/health}" >> "$GITHUB_ENV"
+          echo "RELEASE_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Validate required secrets
+        run: |
+          test -n "${PROD_HOST}" || (echo "PROD_HOST is required" && exit 1)
+          test -n "${PROD_USER}" || (echo "PROD_USER is required" && exit 1)
+          test -n "${PROD_ENV_FILE}" || (echo "PROD_ENV_FILE is required" && exit 1)
+          test -n "${{ secrets.PROD_SSH_PRIVATE_KEY }}" || (echo "PROD_SSH_PRIVATE_KEY is required" && exit 1)
+
+      - name: Prepare production env locally
+        run: printf '%s' "${PROD_ENV_FILE}" > .env.prod
+
+      - name: Validate production compose config
+        run: docker compose -f compose.prod.yml --env-file .env.prod config
+
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Trust production host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${PROD_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload and deploy release
+        run: |
+          ssh "${PROD_USER}@${PROD_HOST}" "mkdir -p ${APP_ROOT}/releases/${RELEASE_ID} ${APP_ROOT}/shared/env"
+          printf '%s' "${PROD_ENV_FILE}" | ssh "${PROD_USER}@${PROD_HOST}" "cat > ${APP_ROOT}/shared/env/.env.prod"
+          tar \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=docs \
+            --exclude=dev \
+            --exclude=references \
+            --exclude=node_modules \
+            --exclude=web/node_modules \
+            --exclude=web/.next \
+            --exclude=api/.pytest_cache \
+            --exclude=api/.ruff_cache \
+            --exclude=codex.md \
+            --exclude=.env \
+            --exclude=.env.prod \
+            --exclude=infra/keys/id_ed25519 \
+            -czf - . | ssh "${PROD_USER}@${PROD_HOST}" "tar -xzf - -C ${APP_ROOT}/releases/${RELEASE_ID}"
+          ssh "${PROD_USER}@${PROD_HOST}" "APP_ROOT=${APP_ROOT} RELEASE_ID=${RELEASE_ID} /bin/bash ${APP_ROOT}/releases/${RELEASE_ID}/infra/scripts/deploy_remote.sh"
+
+      - name: Verify public endpoints
+        run: |
+          curl -fsS "${PUBLIC_URL}" >/tmp/prod-site.html
+          curl -fsS "${API_HEALTH_URL}" >/tmp/prod-api-health.json
+
+      - name: Summarize deployment
+        run: |
+          {
+            echo "## Production Deploy"
+            echo
+            echo "- Operation: \`deploy\`"
+            echo "- Ref: \`${{ inputs.ref }}\`"
+            echo "- Release: \`${RELEASE_ID}\`"
+            echo "- App root: \`${APP_ROOT}\`"
+            echo "- Site: \`${PUBLIC_URL}\`"
+            echo "- Health: \`${API_HEALTH_URL}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  rollback:
+    if: inputs.operation == 'rollback'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PROD_HOST: ${{ secrets.PROD_HOST }}
+      PROD_USER: ${{ secrets.PROD_USER }}
+      APP_ROOT: ${{ vars.PROD_APP_ROOT }}
+      PUBLIC_URL: ${{ vars.PROD_PUBLIC_URL }}
+      API_HEALTH_URL: ${{ vars.PROD_API_HEALTH_URL }}
+      RELEASE_ID: ${{ inputs.release_id }}
+    steps:
+      - name: Resolve production settings
+        run: |
+          echo "APP_ROOT=${APP_ROOT:-/opt/anaconda-site}" >> "$GITHUB_ENV"
+          echo "PUBLIC_URL=${PUBLIC_URL:-http://${PROD_HOST}/}" >> "$GITHUB_ENV"
+          echo "API_HEALTH_URL=${API_HEALTH_URL:-http://${PROD_HOST}/api/v1/health}" >> "$GITHUB_ENV"
+
+      - name: Validate rollback input and secrets
+        run: |
+          test -n "${RELEASE_ID}" || (echo "release_id input is required for rollback" && exit 1)
+          test -n "${PROD_HOST}" || (echo "PROD_HOST is required" && exit 1)
+          test -n "${PROD_USER}" || (echo "PROD_USER is required" && exit 1)
+          test -n "${{ secrets.PROD_SSH_PRIVATE_KEY }}" || (echo "PROD_SSH_PRIVATE_KEY is required" && exit 1)
+
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Trust production host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${PROD_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Ensure target release exists
+        run: ssh "${PROD_USER}@${PROD_HOST}" "test -d ${APP_ROOT}/releases/${RELEASE_ID}"
+
+      - name: Roll back to selected release
+        run: ssh "${PROD_USER}@${PROD_HOST}" "APP_ROOT=${APP_ROOT} RELEASE_ID=${RELEASE_ID} /bin/bash ${APP_ROOT}/releases/${RELEASE_ID}/infra/scripts/deploy_remote.sh"
+
+      - name: Verify public endpoints
+        run: |
+          curl -fsS "${PUBLIC_URL}" >/tmp/prod-site.html
+          curl -fsS "${API_HEALTH_URL}" >/tmp/prod-api-health.json
+
+      - name: Summarize rollback
+        run: |
+          {
+            echo "## Production Rollback"
+            echo
+            echo "- Operation: \`rollback\`"
+            echo "- Release: \`${RELEASE_ID}\`"
+            echo "- App root: \`${APP_ROOT}\`"
+            echo "- Site: \`${PUBLIC_URL}\`"
+            echo "- Health: \`${API_HEALTH_URL}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

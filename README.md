@@ -95,12 +95,14 @@ make prod-down
   `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/rollback_release.sh deploy@45.38.23.152 <release-id>`
 
 GitHub Actions может выполнить production deploy автоматически при push в `main`, если заданы `PROD_*` secrets.
+Также доступен ручной workflow `Production Operations` с операциями `status`, `deploy` и `rollback`.
 
 Предпочтительный поток релиза:
 1. локально пройти `make lint test typecheck build` и `make prod-smoke`;
 2. запушить изменения в release/feature branch;
 3. слить в `main` для GitHub Actions deploy;
-4. использовать manual deploy и rollback как fallback с этой машины.
+4. использовать workflow `Production Operations` для ручного `status/deploy/rollback`;
+5. использовать manual deploy и rollback с этой машины только как fallback.
 
 ## Документация
 

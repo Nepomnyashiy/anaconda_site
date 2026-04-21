@@ -81,7 +81,28 @@ make prod-rollback TARGET=deploy@45.38.23.152 RELEASE_ID=<release-id>
 2. отправить изменения в branch;
 3. слить в `main`;
 4. проверить GitHub Actions deploy;
-5. использовать manual deploy только как fallback или emergency path.
+5. использовать workflow `Production Operations` для ручного `status`, `deploy` и `rollback`;
+6. использовать manual deploy только как fallback или emergency path.
+
+## GitHub Actions manual operations
+
+Workflow `Production Operations` запускается вручную через `workflow_dispatch` и поддерживает:
+- `status` — текущее состояние production и health;
+- `deploy` — ручную выкладку выбранного `ref`;
+- `rollback` — откат на указанный `release_id`.
+
+Для нормальной работы нужно настроить:
+- secrets:
+  - `PROD_HOST`
+  - `PROD_USER`
+  - `PROD_SSH_PRIVATE_KEY`
+  - `PROD_ENV_FILE`
+- optional repository/environment variables:
+  - `PROD_APP_ROOT` — если app root отличается от `/opt/anaconda-site`
+  - `PROD_PUBLIC_URL` — если публичный URL отличается от `http://<PROD_HOST>/`
+  - `PROD_API_HEALTH_URL` — если health endpoint отличается от `http://<PROD_HOST>/api/v1/health`
+
+Рекомендуется хранить secrets и variables в environment `production`, а не только на уровне repository.
 
 ## Rollback behavior
 

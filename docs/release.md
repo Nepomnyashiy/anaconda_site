@@ -41,6 +41,7 @@ Pipeline делает:
 2. `api` — lint, tests
 3. `smoke` — production-like boot и lead submission
 4. `deploy` — только на `main` и только при наличии production secrets
+5. `Production Operations` — ручной `status / deploy / rollback` через `workflow_dispatch`
 
 Обязательные secrets:
 - `PROD_HOST`
@@ -49,6 +50,11 @@ Pipeline делает:
 - `PROD_ENV_FILE`
 
 Если `deploy` job недоступен или secrets временно невалидны, используйте manual deploy с этой машины.
+
+Рекомендуемые optional variables:
+- `PROD_APP_ROOT`
+- `PROD_PUBLIC_URL`
+- `PROD_API_HEALTH_URL`
 
 ## Manual deploy
 
