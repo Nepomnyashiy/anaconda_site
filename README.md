@@ -12,6 +12,7 @@
 
 ```bash
 make init
+cp -n .env.test.example .env.test || true
 make dev
 ```
 
@@ -35,6 +36,14 @@ make prod-smoke
 make clean
 ```
 
+## Developer workflow
+
+- local runbook: [Development guide](docs/development.md)
+- release playbook: [Release guide](docs/release.md)
+- operations runbook: [Operations runbook](docs/runbook.md)
+- contribution rules: [Contributing](CONTRIBUTING.md)
+- test env template: `.env.test.example`
+
 ## Deployment
 
 - bootstrap production host: `ROOT_PASSWORD=... ./infra/scripts/bootstrap_server.sh 45.38.23.152`
@@ -44,6 +53,9 @@ make clean
 
 - [Local deployment](docs/deployment-local.md)
 - [Architecture](docs/architecture.md)
+- [Development guide](docs/development.md)
+- [Release guide](docs/release.md)
+- [Operations runbook](docs/runbook.md)
 - [Production deployment](docs/deployment-production.md)
 - [Server bootstrap](docs/server-bootstrap.md)
 - [Motion guidelines](docs/motion-guidelines.md)
