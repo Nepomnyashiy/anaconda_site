@@ -19,7 +19,8 @@ test-results/
 dist/
 memories/
 infra/keys/id_ed25519
-infra/ansible/group_vars/prod/vault.yml
+infra/ansible/inventory/hosts.yml
+infra/ansible/inventory/group_vars/prod/vault.yml
 infra/ansible/.vault_pass.txt
 references/
 dev/Анализ рынка для экспансии платформы «Anaconda».pdf

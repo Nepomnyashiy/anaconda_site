@@ -1,0 +1,150 @@
+---
+- name: Deploy release to production
+  hosts: prod
+  gather_facts: true
+
+  pre_tasks:
+    - name: Check local production env file
+      ansible.builtin.stat:
+        path: "{{ prod_env_file }}"
+      delegate_to: localhost
+      become: false
+      register: local_env_file
+
+    - name: Check local deployment SSH key
+      ansible.builtin.stat:
+        path: "{{ deploy_private_key_path }}"
+      delegate_to: localhost
+      become: false
+      register: local_private_key
+
+    - name: Assert local deployment prerequisites
+      ansible.builtin.assert:
+        that:
+          - local_env_file.stat.exists
+          - local_private_key.stat.exists
+        fail_msg: "Missing local deploy prerequisites. Expected {{ prod_env_file }} and {{ deploy_private_key_path }}."
+      delegate_to: localhost
+      become: false
+
+    - name: Load local production env content
+      ansible.builtin.set_fact:
+        prod_env_content: "{{ lookup('ansible.builtin.file', prod_env_file) }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Assert required production env keys are present
+      ansible.builtin.assert:
+        that:
+          - "item ~ '=' in prod_env_content"
+        fail_msg: "Local .env.prod does not contain required key: {{ item }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+      loop: "{{ required_env_keys }}"
+
+  tasks:
+    - name: Check deploy user exists
+      ansible.builtin.command: "id -u {{ deploy_user }}"
+      register: deploy_user_check
+      changed_when: false
+
+    - name: Check release layout exists
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ app_root }}"
+        - "{{ app_root }}/releases"
+        - "{{ app_root }}/shared/env"
+      register: deploy_paths
+
+    - name: Assert release layout is ready
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Release layout missing on {{ inventory_hostname }}. Run bootstrap/preflight first."
+      loop: "{{ deploy_paths.results }}"
+
+    - name: Check docker compose availability
+      ansible.builtin.command: docker compose version
+      register: docker_compose_check
+      changed_when: false
+
+    - name: Create release directory
+      ansible.builtin.file:
+        path: "{{ app_root }}/releases/{{ release_id }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
+
+    - name: Copy production env to shared path
+      ansible.builtin.copy:
+        src: "{{ prod_env_file }}"
+        dest: "{{ app_root }}/shared/env/.env.prod"
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0600"
+
+    - name: Build local release archive
+      ansible.builtin.shell: |
+        tar \
+        {% for item in repo_archive_excludes %}
+          --exclude={{ item | quote }} \
+        {% endfor %}
+          -czf {{ local_release_archive | quote }} \
+          -C {{ repo_root | quote }} \
+          .
+      delegate_to: localhost
+      become: false
+      run_once: true
+      changed_when: true
+
+    - name: Upload and extract release archive
+      ansible.builtin.unarchive:
+        src: "{{ local_release_archive }}"
+        dest: "{{ app_root }}/releases/{{ release_id }}"
+        remote_src: false
+
+    - name: Run remote deploy script
+      ansible.builtin.command:
+        argv:
+          - /bin/bash
+          - "{{ app_root }}/releases/{{ release_id }}/infra/scripts/deploy_remote.sh"
+      environment:
+        APP_ROOT: "{{ app_root }}"
+        RELEASE_ID: "{{ release_id }}"
+      register: remote_deploy
+      changed_when: true
+
+    - name: Verify public site responds
+      ansible.builtin.uri:
+        url: "{{ public_url }}"
+        status_code: 200
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: Verify API health responds
+      ansible.builtin.uri:
+        url: "{{ api_health_url }}"
+        status_code: 200
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: Show deploy result
+      ansible.builtin.debug:
+        msg:
+          - "release_id={{ release_id }}"
+          - "{{ remote_deploy.stdout | default('deploy completed') }}"
+
+  post_tasks:
+    - name: Remove local release archive
+      ansible.builtin.file:
+        path: "{{ local_release_archive }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      run_once: true

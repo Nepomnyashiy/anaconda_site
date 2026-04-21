@@ -36,7 +36,29 @@ Bootstrap подготавливает минимальный production host д
 
 ## Связанные файлы
 
-- local wrapper: `infra/scripts/bootstrap_server.sh`
-- remote bootstrap: `infra/scripts/server_bootstrap_remote.sh`
+- preferred bootstrap: `infra/ansible/playbooks/bootstrap.yml`
+- preferred inventory: `infra/ansible/inventory/hosts.yml`
+- local wrapper fallback: `infra/scripts/bootstrap_server.sh`
+- remote bootstrap fallback: `infra/scripts/server_bootstrap_remote.sh`
 - runtime deploy: `infra/scripts/deploy_remote.sh`
 - backup: `infra/scripts/backup_postgres.sh`
+
+## Рекомендуемый запуск
+
+1. создать inventory:
+
+```bash
+cp infra/ansible/inventory/hosts.example.yml infra/ansible/inventory/hosts.yml
+```
+
+2. выполнить bootstrap:
+
+```bash
+make ansible-bootstrap ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml ANSIBLE_ARGS="-u root -k"
+```
+
+3. после bootstrap проверить server:
+
+```bash
+make ansible-preflight ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+```

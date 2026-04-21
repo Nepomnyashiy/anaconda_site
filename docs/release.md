@@ -16,6 +16,7 @@ make build
 docker compose -f compose.prod.yml config
 make prod-smoke
 make prod-down
+make ansible-syntax
 ```
 
 Также нужно проверить scope релиза:
@@ -58,20 +59,22 @@ Pipeline делает:
 
 ## Manual deploy
 
-Fallback для ручного релиза:
+Предпочтительный ручной релиз через Ansible:
 
 ```bash
-SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/deploy_release.sh deploy@45.38.23.152
+make ansible-preflight ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+make ansible-deploy ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
 ```
 
 Более короткий operator flow:
 
 ```bash
-make prod-status TARGET=deploy@45.38.23.152
-make prod-releases TARGET=deploy@45.38.23.152
-make prod-deploy TARGET=deploy@45.38.23.152
-make prod-status TARGET=deploy@45.38.23.152
+make ansible-status ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+make ansible-deploy ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+make ansible-status ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
 ```
+
+Shell deploy scripts остаются fallback для аварийных сценариев и сравнения с предыдущим процессом.
 
 После выкладки нужно проверить:
 
@@ -89,7 +92,7 @@ curl -f http://45.38.23.152/api/v1/health
 2. выполнить rollback на нее:
 
 ```bash
-SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/rollback_release.sh deploy@45.38.23.152 <previous-release-id>
+make ansible-rollback ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml RELEASE_ID=<previous-release-id>
 ```
 
 Rollback обязателен при:

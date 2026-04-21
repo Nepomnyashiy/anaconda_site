@@ -1,0 +1,210 @@
+---
+- name: Bootstrap production host
+  hosts: prod
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Check local public key
+      ansible.builtin.stat:
+        path: "{{ bootstrap_public_key_path }}"
+      delegate_to: localhost
+      become: false
+      register: local_public_key
+
+    - name: Assert local public key exists
+      ansible.builtin.assert:
+        that:
+          - local_public_key.stat.exists
+        fail_msg: "Bootstrap public key not found: {{ bootstrap_public_key_path }}"
+      delegate_to: localhost
+      become: false
+
+    - name: Assert supported operating system
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: "Bootstrap currently supports Debian/Ubuntu hosts only."
+
+  tasks:
+    - name: Install baseline packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - fail2ban
+          - git
+          - nginx
+          - ufw
+          - unattended-upgrades
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Check Docker availability
+      ansible.builtin.command: docker --version
+      register: docker_version
+      changed_when: false
+      failed_when: false
+
+    - name: Install Docker engine
+      ansible.builtin.shell: "curl -fsSL {{ docker_install_script_url }} | sh"
+      when: docker_version.rc != 0
+
+    - name: Ensure Docker service is enabled
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Check Docker Compose availability
+      ansible.builtin.command: docker compose version
+      register: docker_compose_version
+      changed_when: false
+
+    - name: Ensure swapfile is present and active
+      ansible.builtin.shell: |
+        if ! swapon --show | grep -q .; then
+          fallocate -l {{ swapfile_size_mb }}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count={{ swapfile_size_mb }}
+          chmod 600 /swapfile
+          mkswap /swapfile
+          swapon /swapfile
+        fi
+        grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+      changed_when: false
+
+    - name: Ensure deploy user exists
+      ansible.builtin.user:
+        name: "{{ deploy_user }}"
+        shell: /bin/bash
+        groups: sudo,docker
+        append: true
+        create_home: true
+
+    - name: Ensure SSH directories exist
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: "{{ item.mode }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+      loop:
+        - path: /root/.ssh
+          mode: "0700"
+          owner: root
+          group: root
+        - path: "/home/{{ deploy_user }}/.ssh"
+          mode: "0700"
+          owner: "{{ deploy_user }}"
+          group: "{{ deploy_user }}"
+
+    - name: Authorize bootstrap public key for root
+      ansible.builtin.authorized_key:
+        user: root
+        key: "{{ lookup('ansible.builtin.file', bootstrap_public_key_path) }}"
+
+    - name: Authorize bootstrap public key for deploy user
+      ansible.builtin.authorized_key:
+        user: "{{ deploy_user }}"
+        key: "{{ lookup('ansible.builtin.file', bootstrap_public_key_path) }}"
+
+    - name: Ensure application directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
+      loop:
+        - "{{ app_root }}"
+        - "{{ app_root }}/releases"
+        - "{{ app_root }}/shared"
+        - "{{ app_root }}/shared/env"
+        - "{{ app_root }}/shared/backups"
+
+    - name: Install nginx site configuration
+      ansible.builtin.template:
+        src: ../templates/nginx-anaconda-site.conf.j2
+        dest: /etc/nginx/sites-available/anaconda-site
+        owner: root
+        group: root
+        mode: "0644"
+      notify: reload nginx
+
+    - name: Enable nginx site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/anaconda-site
+        dest: /etc/nginx/sites-enabled/anaconda-site
+        state: link
+        force: true
+
+    - name: Remove default nginx site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Validate nginx configuration
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Ensure nginx is enabled
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Configure UFW baseline
+      ansible.builtin.shell: |
+        ufw --force reset
+        ufw default deny incoming
+        ufw default allow outgoing
+        ufw allow 22/tcp
+        ufw allow 80/tcp
+        ufw allow 443/tcp
+        ufw --force enable
+      changed_when: false
+
+    - name: Ensure fail2ban service is enabled
+      ansible.builtin.service:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    - name: Ensure unattended upgrades service is enabled
+      ansible.builtin.service:
+        name: unattended-upgrades
+        state: started
+        enabled: true
+
+    - name: Disable SSH password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication '
+        line: 'PasswordAuthentication no'
+      notify: restart ssh
+
+    - name: Disable SSH root password login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin '
+        line: 'PermitRootLogin prohibit-password'
+      notify: restart ssh
+
+    - name: Configure PostgreSQL backup cron
+      ansible.builtin.cron:
+        name: anaconda-site-backup
+        user: root
+        minute: "0"
+        hour: "2"
+        job: "APP_ROOT={{ app_root }} /bin/bash {{ app_root }}/current/infra/scripts/backup_postgres.sh >> /var/log/anaconda-site-backup.log 2>&1"
+
+  handlers:
+    - name: reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+
+    - name: restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted

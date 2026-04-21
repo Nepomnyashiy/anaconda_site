@@ -46,13 +46,20 @@ Bootstrap готовит:
 ## Manual deploy
 
 1. Подготовить локальный `.env.prod`
-2. Выполнить:
+2. Создать `infra/ansible/inventory/hosts.yml` из example
+3. Выполнить preflight:
 
 ```bash
-SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/deploy_release.sh deploy@45.38.23.152
+make ansible-preflight ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
 ```
 
-3. Проверить:
+4. Выполнить deploy:
+
+```bash
+make ansible-deploy ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+```
+
+5. Проверить:
 
 ```bash
 curl -f http://45.38.23.152/
@@ -62,11 +69,13 @@ curl -f http://45.38.23.152/api/v1/health
 Операторские команды с этой машины:
 
 ```bash
-make prod-status TARGET=deploy@45.38.23.152
-make prod-releases TARGET=deploy@45.38.23.152
-make prod-deploy TARGET=deploy@45.38.23.152
-make prod-rollback TARGET=deploy@45.38.23.152 RELEASE_ID=<release-id>
+make ansible-preflight ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+make ansible-status ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+make ansible-deploy ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+make ansible-rollback ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml RELEASE_ID=<release-id>
 ```
+
+Shell-команды `prod-status`, `prod-deploy`, `prod-rollback` остаются как fallback.
 
 ## GitHub Actions deploy
 

@@ -1,12 +1,34 @@
 # Пошаговый ручной деплой
 
-Инструкция для ручного production deploy текущего контура `ANACONDA / OSNOVA`.
+Предпочтительный ручной production deploy текущего контура `ANACONDA / OSNOVA` теперь идет через `Ansible`.
 
 Текущая production-схема:
 - host-level `nginx`
 - `docker compose -f compose.prod.yml`
 - release directories в `/opt/anaconda-site/releases`
 - активный релиз через symlink `/opt/anaconda-site/current`
+
+## 0. Подготовить inventory
+
+Создайте локальный inventory:
+
+```bash
+cp infra/ansible/inventory/hosts.example.yml infra/ansible/inventory/hosts.yml
+```
+
+Для текущей схемы на IP `45.38.23.152` inventory может выглядеть так:
+
+```yaml
+all:
+  children:
+    prod:
+      hosts:
+        anaconda-prod:
+          ansible_host: 45.38.23.152
+          ansible_user: deploy
+          ansible_ssh_private_key_file: infra/keys/id_ed25519
+          app_domain: 45.38.23.152
+```
 
 ## 1. Preconditions
 
@@ -20,6 +42,7 @@ make build
 docker compose -f compose.prod.yml config
 make prod-smoke
 make prod-down
+make ansible-syntax
 ```
 
 Если `prod-smoke` запускается локально, dev-контур должен быть остановлен, чтобы не было конфликта портов.
@@ -46,32 +69,48 @@ make prod-down
 infra/keys/id_ed25519
 ```
 
-Если нужен другой ключ, передайте `SSH_KEY_PATH=...`.
+Если нужен другой ключ, укажите его в `infra/ansible/inventory/hosts.yml`.
 
-## 4. Выполнить deploy
+## 4. Проверить сервер через Ansible preflight
 
 ```bash
-SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/deploy_release.sh deploy@45.38.23.152
+make ansible-preflight ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
 ```
 
-Что делает скрипт:
-- создает новую release directory;
-- копирует `.env.prod` на host в shared env;
-- архивирует и отправляет код;
-- переключает `current` на новый release;
-- поднимает `compose.prod.yml`;
+Что проверяет preflight:
+- наличие локального `.env.prod`;
+- наличие локального приватного SSH ключа;
+- наличие обязательных env keys;
+- существование `deploy` user;
+- существование `{{ app_root }}` и release directories на server;
+- доступность `docker`, `docker compose`, `nginx`.
+
+## 5. Выполнить deploy через Ansible
+
+```bash
+make ansible-deploy ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+```
+
+Что делает playbook:
+- проверяет локальное env и ключ;
+- проверяет server runtime и directory layout;
+- создает release directory;
+- копирует `.env.prod` в `shared/env`;
+- упаковывает текущий repo и отправляет релиз на server;
+- вызывает `deploy_remote.sh`;
 - проверяет `site` и `health`;
-- пытается автоматически откатиться, если healthcheck не проходит.
+- использует release-based auto-rollback, если healthcheck не проходит.
 
 Для удобной работы с этой машины доступны также:
 
 ```bash
-make prod-status TARGET=deploy@45.38.23.152
-make prod-releases TARGET=deploy@45.38.23.152
-make prod-deploy TARGET=deploy@45.38.23.152
+make ansible-status ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+make ansible-deploy ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
 ```
 
-## 5. Проверить результат на production
+Shell-скрипты `prod-status`, `prod-deploy`, `prod-rollback` остаются как fallback.
+
+## 6. Проверить результат на production
 
 ```bash
 curl -f http://45.38.23.152/
@@ -85,7 +124,7 @@ docker compose -f /opt/anaconda-site/current/compose.prod.yml --env-file /opt/an
 docker compose -f /opt/anaconda-site/current/compose.prod.yml --env-file /opt/anaconda-site/shared/env/.env.prod logs --tail=200
 ```
 
-## 6. Если deploy не удался
+## 7. Если deploy не удался
 
 Проверьте:
 - существует ли release directory;
@@ -99,7 +138,13 @@ sudo nginx -t
 sudo systemctl status nginx
 ```
 
-## 7. Ручной rollback
+Также можно сразу посмотреть текущее состояние через:
+
+```bash
+make ansible-status ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml
+```
+
+## 8. Ручной rollback через Ansible
 
 Если автоматический rollback не помог или нужен явный откат:
 
@@ -112,7 +157,7 @@ SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/list_releases.sh deploy@45.38
 2. Запустите откат на него:
 
 ```bash
-SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/rollback_release.sh deploy@45.38.23.152 <previous-release-id>
+make ansible-rollback ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml RELEASE_ID=<previous-release-id>
 ```
 
 3. Повторно проверьте:
@@ -122,7 +167,32 @@ curl -f http://45.38.23.152/
 curl -f http://45.38.23.152/api/v1/health
 ```
 
-## 8. Когда использовать manual deploy
+## 9. Server bootstrap через Ansible
+
+Если server еще не подготовлен:
+
+1. создайте `infra/ansible/inventory/hosts.yml` как выше;
+2. выполните bootstrap от `root`:
+
+```bash
+make ansible-bootstrap ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml ANSIBLE_ARGS="-u root -k"
+```
+
+Если на host нужен `sudo`, а не прямой `root`, используйте:
+
+```bash
+make ansible-bootstrap ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml ANSIBLE_ARGS="-K"
+```
+
+Bootstrap:
+- создает `deploy` user;
+- добавляет SSH key;
+- ставит Docker, `nginx`, UFW, fail2ban;
+- создает release directories;
+- включает backup cron;
+- ужесточает SSH конфиг.
+
+## 10. Когда использовать manual deploy
 
 Используйте его, если:
 - нужно выполнить первую выкладку;

@@ -93,6 +93,12 @@ make prod-down
   `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/prod_status.sh deploy@45.38.23.152`
 - manual rollback:
   `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/rollback_release.sh deploy@45.38.23.152 <release-id>`
+- ansible preflight:
+  `make ansible-preflight ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml`
+- ansible deploy:
+  `make ansible-deploy ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml`
+- ansible rollback:
+  `make ansible-rollback ANSIBLE_INVENTORY=infra/ansible/inventory/hosts.yml RELEASE_ID=<release-id>`
 
 GitHub Actions может выполнить production deploy автоматически при push в `main`, если заданы `PROD_*` secrets.
 Также доступен ручной workflow `Production Operations` с операциями `status`, `deploy` и `rollback`.
@@ -102,7 +108,8 @@ GitHub Actions может выполнить production deploy автомати�
 2. запушить изменения в release/feature branch;
 3. слить в `main` для GitHub Actions deploy;
 4. использовать workflow `Production Operations` для ручного `status/deploy/rollback`;
-5. использовать manual deploy и rollback с этой машины только как fallback.
+5. использовать Ansible manual flow с этой машины для `bootstrap/preflight/deploy/rollback`;
+6. использовать старые shell deploy-скрипты только как fallback.
 
 ## Документация
 

@@ -1,0 +1,110 @@
+---
+- name: Verify production server readiness
+  hosts: prod
+  gather_facts: true
+
+  pre_tasks:
+    - name: Check local production env file
+      ansible.builtin.stat:
+        path: "{{ prod_env_file }}"
+      delegate_to: localhost
+      become: false
+      register: local_env_file
+
+    - name: Check local deployment SSH key
+      ansible.builtin.stat:
+        path: "{{ deploy_private_key_path }}"
+      delegate_to: localhost
+      become: false
+      register: local_private_key
+
+    - name: Assert local deployment prerequisites
+      ansible.builtin.assert:
+        that:
+          - local_env_file.stat.exists
+          - local_private_key.stat.exists
+        fail_msg: "Missing local deploy prerequisites. Expected {{ prod_env_file }} and {{ deploy_private_key_path }}."
+      delegate_to: localhost
+      become: false
+
+    - name: Load local production env content
+      ansible.builtin.set_fact:
+        prod_env_content: "{{ lookup('ansible.builtin.file', prod_env_file) }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Assert required production env keys are present
+      ansible.builtin.assert:
+        that:
+          - "item ~ '=' in prod_env_content"
+        fail_msg: "Local .env.prod does not contain required key: {{ item }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+      loop: "{{ required_env_keys }}"
+
+  tasks:
+    - name: Assert supported operating system
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: "Production host must run Debian/Ubuntu."
+
+    - name: Check deploy user exists
+      ansible.builtin.command: "id -u {{ deploy_user }}"
+      register: deploy_user_check
+      changed_when: false
+
+    - name: Check release directories exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ app_root }}"
+        - "{{ app_root }}/releases"
+        - "{{ app_root }}/shared"
+        - "{{ app_root }}/shared/env"
+        - "{{ app_root }}/shared/backups"
+      register: app_root_stats
+
+    - name: Assert release directory layout exists
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Production directory layout is incomplete under {{ app_root }}. Run bootstrap first."
+      loop: "{{ app_root_stats.results }}"
+
+    - name: Check docker engine availability
+      ansible.builtin.command: docker --version
+      register: docker_engine_check
+      changed_when: false
+
+    - name: Check docker compose availability
+      ansible.builtin.command: docker compose version
+      register: docker_compose_check
+      changed_when: false
+
+    - name: Check nginx binary availability
+      ansible.builtin.command: nginx -v
+      register: nginx_binary_check
+      changed_when: false
+
+    - name: Check nginx site configuration exists
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/anaconda-site
+      register: nginx_site_config
+
+    - name: Check nginx service state
+      ansible.builtin.command: systemctl is-active nginx
+      register: nginx_service_check
+      changed_when: false
+
+    - name: Report preflight summary
+      ansible.builtin.debug:
+        msg:
+          - "deploy_user={{ deploy_user }} ok"
+          - "app_root={{ app_root }} ok"
+          - "{{ docker_engine_check.stdout }}"
+          - "{{ docker_compose_check.stdout }}"
+          - "nginx_config={{ nginx_site_config.stat.exists }}"
+          - "nginx={{ nginx_service_check.stdout }}"
