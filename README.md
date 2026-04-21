@@ -1,14 +1,31 @@
-# OSNOVA Website
+# ANACONDA / OSNOVA Website
 
-Маркетинговый сайт ОСНОВА ИТ с локальным запуском через `docker compose`.
+Платформенный сайт и delivery-контур для `ANACONDA / OSNOVA` как `Digital Symbiont Platform`.
 
-## Stack
+Репозиторий держит одну рабочую public surface:
+- marketing / narrative landing;
+- стабильный lead-flow через `POST /api/v1/leads`;
+- healthcheck для локальной и production-проверки;
+- future-ready support API, который сохранен для следующих этапов, но не считается частью текущего публичного контракта сайта.
 
-- `web`: Next.js, TypeScript, Tailwind CSS, Framer Motion
-- `api`: FastAPI
-- `db`: PostgreSQL
+## Стек
 
-## Quick start
+- `web`: Next.js 14, TypeScript, Tailwind CSS, Framer Motion
+- `api`: FastAPI, Pydantic, Psycopg
+- `postgres`: PostgreSQL 16
+- runtime: Docker Compose
+- production entrypoint: host-level `nginx` + release-based deploy
+- CI/CD: GitHub Actions
+
+## Структура репозитория
+
+- `web/` — публичный сайт и внутренний UI playground (`/components-demo`)
+- `api/` — публичный и support API, migrations, тесты
+- `infra/` — bootstrap, deploy, backup и server scripts
+- `docs/` — архитектура, разработка, релизы, эксплуатация
+- `dev/roles/` — проектные роли и инженерные директивы
+
+## Быстрый старт
 
 ```bash
 make init
@@ -16,13 +33,13 @@ cp -n .env.test.example .env.test || true
 make dev
 ```
 
-Сервисы будут доступны по адресам:
-
+После старта доступны:
 - сайт: `http://localhost:3000`
-- API: `http://localhost:8000/docs`
-- pgweb: `docker compose --profile debug up pgweb`
+- API docs: `http://localhost:8000/docs`
+- internal component playground: `http://localhost:3000/components-demo`
+- pgweb: `docker compose -f compose.dev.yml --profile debug up pgweb`
 
-## Main commands
+## Основные команды
 
 ```bash
 make up
@@ -33,29 +50,68 @@ make test
 make typecheck
 make build
 make prod-smoke
+make prod-down
 make clean
 ```
 
-## Developer workflow
+## Что считается стабильным контрактом
 
-- local runbook: [Development guide](docs/development.md)
-- release playbook: [Release guide](docs/release.md)
-- operations runbook: [Operations runbook](docs/runbook.md)
-- contribution rules: [Contributing](CONTRIBUTING.md)
-- test env template: `.env.test.example`
+Публичный сайт опирается на два обязательных endpoint'а:
+- `GET /api/v1/health`
+- `POST /api/v1/leads`
 
-## Deployment
+Support endpoint'ы (`sessions`, `analytics`, `webhooks`, `demo-sessions`) сохранены в API и документации, но не входят в текущий обязательный public surface сайта.
 
-- bootstrap production host: `ROOT_PASSWORD=... ./infra/scripts/bootstrap_server.sh 45.38.23.152`
-- first manual production deploy: `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/deploy_release.sh deploy@45.38.23.152`
+## Локальная и production-проверка
 
-## Docs
+Минимальный developer gate:
 
-- [Local deployment](docs/deployment-local.md)
-- [Architecture](docs/architecture.md)
+```bash
+make lint
+make test
+make typecheck
+make build
+```
+
+Production-like проверка:
+
+```bash
+docker compose -f compose.prod.yml config
+make prod-smoke
+make prod-down
+```
+
+## Production deploy
+
+- bootstrap production host:
+  `ROOT_PASSWORD=... ./infra/scripts/bootstrap_server.sh 45.38.23.152`
+- manual deploy:
+  `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/deploy_release.sh deploy@45.38.23.152`
+- release list:
+  `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/list_releases.sh deploy@45.38.23.152`
+- production status:
+  `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/prod_status.sh deploy@45.38.23.152`
+- manual rollback:
+  `SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/rollback_release.sh deploy@45.38.23.152 <release-id>`
+
+GitHub Actions может выполнить production deploy автоматически при push в `main`, если заданы `PROD_*` secrets.
+
+Предпочтительный поток релиза:
+1. локально пройти `make lint test typecheck build` и `make prod-smoke`;
+2. запушить изменения в release/feature branch;
+3. слить в `main` для GitHub Actions deploy;
+4. использовать manual deploy и rollback как fallback с этой машины.
+
+## Документация
+
+- [Архитектура](docs/architecture.md)
+- [Локальный запуск](docs/deployment-local.md)
+- [Пошаговый локальный запуск](docs/local-deploy-checklist.md)
 - [Development guide](docs/development.md)
 - [Release guide](docs/release.md)
 - [Operations runbook](docs/runbook.md)
 - [Production deployment](docs/deployment-production.md)
+- [Пошаговый ручной деплой](docs/manual-deploy.md)
 - [Server bootstrap](docs/server-bootstrap.md)
 - [Motion guidelines](docs/motion-guidelines.md)
+- [Contributing](CONTRIBUTING.md)

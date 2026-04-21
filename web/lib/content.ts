@@ -1,58 +1,53 @@
 export const metrics = [
   { value: "8-12 недель", label: "до первого интеграционного результата" },
-  { value: "On-prem", label: "развертывание в закрытых контурах" },
-  { value: "AI-ready", label: "единая архитектура для copilots и automation" }
+  { value: "On-prem", label: "развертывание в закрытых и смешанных контурах" },
+  { value: "AI-ready", label: "единая база для copilots, automation и аналитики" }
 ];
 
 export const flowSteps = [
   {
-    title: "Подключаем legacy",
-    body: "1С, Oracle, MSSQL и ERP-системы подключаются через адаптеры без разрушения текущего контура."
+    title: "Диагностируем хаос",
+    body: "Фиксируем разрывы между каналами, системами и командами, где контекст теряется и решения принимаются с задержкой."
   },
   {
-    title: "Нормализуем данные",
-    body: "OSNOVA Core превращает разрозненные источники в единую модель и событийный поток."
+    title: "Подключаем источники",
+    body: "1С, ERP, CRM, таблицы и коммуникации сводятся в единый управляемый контур без лобового переписывания legacy."
   },
   {
-    title: "Включаем AI и workflow",
-    body: "RAG, аналитика и automation работают на одной базе фактов, а не на копиях таблиц."
+    title: "Нормализуем память",
+    body: "OSNOVA Core превращает разрозненные данные и события в общую operational memory layer для процессов и людей."
   },
   {
-    title: "Даем контроль",
-    body: "Руководители получают прозрачность, скорость принятия решений и управляемый рост без хаоса."
+    title: "Включаем AI и контроль",
+    body: "AI-оркестрация, аналитика и workflow опираются на единую базу фактов, а не на копии таблиц и частные сценарии."
   }
 ];
 
 export const advantages = [
   {
-    title: "Быстрый вход в legacy",
-    outcome: "Сокращение времени интеграции за счет адаптерного слоя и нормализации.",
-    accent: "Adapters"
+    title: "Единый product surface",
+    outcome: "Маркетинговая и платформенная narrative-поверхность собирается в один поддерживаемый контур без дублирования и расхождений.",
+    accent: "Surface"
   },
   {
-    title: "Enterprise security",
-    outcome: "On-prem, сегментация доступа и предсказуемая модель эксплуатации.",
-    accent: "Security"
+    title: "Прозрачный runtime-контракт",
+    outcome: "Next.js, FastAPI и PostgreSQL работают в одном воспроизводимом dev/prod pipeline с понятными env и healthchecks.",
+    accent: "Runtime"
   },
   {
-    title: "AI-ready фундамент",
-    outcome: "RAG, copilots и automation без повторного переписывания ядра.",
-    accent: "AI"
+    title: "Release discipline",
+    outcome: "GitHub Actions, smoke-проверки, release-based deploy и rollback-процедуры готовят проект к дальнейшей разработке без хаотичных выкладок.",
+    accent: "Release"
   },
   {
-    title: "Масштабирование без хаоса",
-    outcome: "Единая платформа для процессов, команд и аналитики вместо набора разрозненных сервисов.",
-    accent: "Scale"
+    title: "Future-ready backend",
+    outcome: "Стабильный публичный API отделен от platform-support заделов, поэтому проект можно расширять без размывания границ продукта.",
+    accent: "API"
   },
   {
-    title: "Работа в закрытых контурах",
-    outcome: "Подходит для regulated-сред и сложной сетевой политики.",
-    accent: "On-prem"
-  },
-  {
-    title: "Black Mamba tooling",
-    outcome: "Инженерный инструментарий для ускорения поставки и поддержки платформы.",
-    accent: "Tooling"
+    title: "Предсказуемая эксплуатация",
+    outcome: "Host Nginx, docker compose, backup-скрипты и runbook дают базовый production-safe контур для поддержки и роста.",
+    accent: "Ops"
   }
 ];
 
@@ -74,13 +69,33 @@ export const useCases = [
 export const architecturePoints = [
   "Adapters для legacy и корпоративных систем",
   "OSNOVA Core как слой нормализации и orchestration",
-  "Data services для аналитики, AI и автоматизации",
-  "Управляемая эксплуатация, безопасность и observability"
+  "FastAPI + PostgreSQL как публичный и support API слой",
+  "Управляемая эксплуатация, release discipline и production hardening"
 ];
 
 export const trustSignals = [
-  "Инженерная зрелость",
-  "Enterprise-ready delivery",
-  "Безопасное локальное развертывание"
+  "Docker Compose для локального и production-like запуска",
+  "GitHub Actions: lint, typecheck, tests, smoke, deploy",
+  "Nginx reverse proxy и release-based deploy на production host"
 ];
 
+export const deliveryPillars = [
+  {
+    title: "Локальная воспроизводимость",
+    body: "Проект поднимается через `make init`, `make dev` и `make up`, без скрытых ручных шагов и разрыва между docs и runtime."
+  },
+  {
+    title: "Стабильный публичный API",
+    body: "Для сайта обязательными остаются `GET /api/v1/health` и `POST /api/v1/leads`, а support-endpoint'ы документируются отдельно."
+  },
+  {
+    title: "Безопасный production baseline",
+    body: "Host-level `nginx`, loopback runtime, env-contract, healthchecks, backup и rollback дисциплина фиксируются как часть эксплуатационного контура."
+  }
+];
+
+export const nextSteps = [
+  "Соберем исходные точки хаоса: каналы связи, учетные системы, документы и ручные процессы.",
+  "Покажем минимальный архитектурный сценарий внедрения под ваш контур и требования к безопасности.",
+  "Подготовим roadmap для пилота, интеграций и последующего AI-расширения."
+];

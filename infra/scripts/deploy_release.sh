@@ -24,6 +24,10 @@ fi
 
 SSH_OPTS=(-i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/tmp/anaconda_known_hosts -o IdentitiesOnly=yes)
 
+echo "Deploying release ${RELEASE_ID} to ${TARGET}"
+echo "App root: ${APP_ROOT}"
+echo "Env file: ${ENV_FILE}"
+
 ssh "${SSH_OPTS[@]}" "$TARGET" "mkdir -p ${APP_ROOT}/releases/${RELEASE_ID} ${APP_ROOT}/shared/env"
 cat "$ENV_FILE" | ssh "${SSH_OPTS[@]}" "$TARGET" "cat > ${APP_ROOT}/shared/env/.env.prod"
 
@@ -45,3 +49,5 @@ tar \
   -czf - . | ssh "${SSH_OPTS[@]}" "$TARGET" "tar -xzf - -C ${APP_ROOT}/releases/${RELEASE_ID}"
 
 ssh "${SSH_OPTS[@]}" "$TARGET" "APP_ROOT=${APP_ROOT} RELEASE_ID=${RELEASE_ID} /bin/bash ${APP_ROOT}/releases/${RELEASE_ID}/infra/scripts/deploy_remote.sh"
+
+echo "Deployment command completed for release ${RELEASE_ID}"

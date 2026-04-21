@@ -1,32 +1,35 @@
 # Development Guide
 
-## Purpose
+## Цель
 
-Этот проект — platform web surface для `ANACONDA / OSNOVA`. Разработка должна поддерживать не просто сайт, а enterprise-ready контур: narrative layer, API support, release discipline и production-safe CI/CD.
+Этот проект поддерживает не просто сайт, а platform delivery surface для `ANACONDA / OSNOVA`. Любая разработка должна сохранять:
+- единую public surface;
+- стабильный lead contract;
+- воспроизводимый локальный запуск;
+- production-safe runtime и deploy discipline;
+- актуальную документацию.
 
-## Local setup
-
-1. Инициализировать env-файлы:
+## Локальная подготовка
 
 ```bash
 make init
 cp -n .env.test.example .env.test || true
 ```
 
-2. Поднять локальный контур:
+Локальный runtime:
 
 ```bash
 make dev
 ```
 
-3. Проверить доступность:
-
-- site: `http://localhost:3000`
+Основные адреса:
+- сайт: `http://localhost:3000`
 - API docs: `http://localhost:8000/docs`
+- internal playground: `http://localhost:3000/components-demo`
 
-## Quality gates
+## Обязательные проверки
 
-Минимальный developer gate перед PR:
+Перед PR:
 
 ```bash
 make lint
@@ -35,7 +38,7 @@ make typecheck
 make build
 ```
 
-Релизный gate перед push в `main`:
+Перед релизным изменением или push в `main`:
 
 ```bash
 docker compose -f compose.prod.yml config
@@ -43,28 +46,36 @@ make prod-smoke
 make prod-down
 ```
 
-## Runtime model
+## Правила изменения public surface
 
-- `web` — Next.js SSR/static surface
-- `api` — FastAPI layer for leads and platform support endpoints
-- `postgres` — primary persistence
-- `compose.dev.yml` — local developer topology
-- `compose.prod.yml` — production runtime contract
+- Navbar, CTA и секции landing должны быть синхронизированы.
+- Публичный сайт не должен зависеть от нестабильных support endpoint'ов.
+- Для отправки лида используется JSON-контракт `POST /api/v1/leads`.
+- Если меняется public behavior, нужно обновить:
+  - `README.md`
+  - `docs/architecture.md`
+  - runbook / release docs, если меняется runtime или deploy flow
 
-## Environment model
+## Работа с env и runtime
 
-- `.env.example` покрывает локальную разработку
-- `.env.test.example` нужен для изолированных test/CI сценариев
-- `.env.prod.example` фиксирует production variable contract без секретов
+- `.env.example` — локальный baseline
+- `.env.test.example` — test/CI baseline
+- `.env.prod.example` — production contract без секретов
 
 Если появляется новая runtime-переменная:
+1. добавить ее в нужный `*.example`;
+2. сверить `compose.dev.yml`, `compose.prod.yml`, CI и docs;
+3. убедиться, что локальный и production-like сценарий остаются воспроизводимыми.
 
-1. добавить ее в соответствующий `*.example`
-2. обновить `README.md` или этот runbook, если меняется developer flow
-3. проверить `compose.dev.yml`, `compose.prod.yml` и GitHub workflows
+## Работа с support API
 
-## Release notes for developers
+`sessions`, `analytics`, `webhooks`, `demo-sessions` и `dialogue_history` допускаются как заделы для следующей очереди, но:
+- не должны ломать public site;
+- должны быть явно документированы;
+- не должны маскироваться под уже завершенную пользовательскую функциональность.
 
-- Push в `main` может запустить production deploy job в GitHub Actions.
-- Любые infra/CI изменения нужно валидировать не только локально, но и на уровне release artifact.
-- Нерелизные локальные файлы (`memories/`, ad hoc notes, private keys) не должны попадать в коммиты.
+## Гигиена репозитория
+
+- Не коммитить локальные env-файлы, private keys, build-артефакты, `memories/` и ad hoc заметки.
+- Не оставлять в проекте мертвые страницы, дублирующие narrative-поверхности и неиспользуемые маркетинговые заготовки.
+- Если документация противоречит коду, исправлять это в той же задаче, а не “потом”.

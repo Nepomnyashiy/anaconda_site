@@ -2,20 +2,18 @@
 
 ## Purpose
 
-Этот runbook описывает operational actions для локальной диагностики и production support контура `ANACONDA / OSNOVA` web surface.
+Runbook покрывает базовые operational действия для локального и production контура `ANACONDA / OSNOVA`.
 
-## System topology
+## Топология
 
 - `web` — Next.js runtime
 - `api` — FastAPI runtime
-- `postgres` — persistence layer
-- `nginx` на production host проксирует:
+- `postgres` — persistence
+- production host `nginx` проксирует:
   - `127.0.0.1:3000` -> `web`
   - `127.0.0.1:8000` -> `api`
 
-## Local diagnostics
-
-### Validate developer stack
+## Базовая локальная диагностика
 
 ```bash
 make up
@@ -23,7 +21,7 @@ make logs
 make down
 ```
 
-### Validate production compose contract
+Production-like локальная проверка:
 
 ```bash
 docker compose -f compose.prod.yml config
@@ -31,25 +29,23 @@ make prod-smoke
 make prod-down
 ```
 
-### Port checks
-
-Если runtime не стартует, сначала проверить занятые порты:
+Проверка портов:
 
 ```bash
 ss -ltnp '( sport = :3000 or sport = :8000 or sport = :8081 )'
 docker ps --format '{{.Names}} {{.Ports}}'
 ```
 
-## Production diagnostics
+## Production диагностика
 
-### Health endpoints
+### Health checks
 
 ```bash
 curl -f http://45.38.23.152/
 curl -f http://45.38.23.152/api/v1/health
 ```
 
-### Container/runtime checks on host
+### Runtime checks on host
 
 ```bash
 docker compose -f /opt/anaconda-site/current/compose.prod.yml --env-file /opt/anaconda-site/shared/env/.env.prod ps
@@ -63,37 +59,38 @@ sudo nginx -t
 sudo systemctl status nginx
 ```
 
-## Incident classes
+## Типовые инциденты
 
-### Build or deploy failure
+### Сайт не отвечает
 
-- проверить GitHub Actions run
-- проверить доступность `PROD_*` secrets
-- проверить SSH connectivity до production host
-- проверить наличие release директории на host
+- проверить `curl` до `/`
+- проверить контейнер `web`
+- проверить `nginx` и loopback binding на `127.0.0.1:3000`
+- проверить, что `current` указывает на ожидаемый release
 
 ### API unhealthy
 
+- проверить `curl` до `/api/v1/health`
 - проверить `DATABASE_URL`
-- проверить применение миграций при старте `api`
-- проверить доступность `postgres`
+- проверить миграции и доступность `postgres`
 - снять логи `api`
 
-### Frontend unavailable
+### Лиды не отправляются
 
-- проверить, слушает ли `web` контейнер `3000`
-- проверить `NEXT_PUBLIC_*` переменные
-- проверить `nginx` proxy config
+- проверить, что `web` отправляет JSON в `POST /api/v1/leads`
+- проверить CORS и `NEXT_PUBLIC_API_URL`
+- проверить логи `api` и наличие новых записей в `leads`
 
-### Port collision
+### Deploy failed
 
-- определить owner процесса через `ss -ltnp`
-- убрать временные smoke containers
-- не останавливать несвязанные сервисы без подтвержденного ownership
+- проверить GitHub Actions run или manual deploy log
+- проверить наличие release directory
+- проверить env file на host
+- убедиться, что сработал автоматический rollback, если healthcheck нового релиза не прошел
 
-## Backup and restore notes
+## Backup
 
 - backup script: `infra/scripts/backup_postgres.sh`
-- shared backup path on host: `/opt/anaconda-site/shared/backups`
+- backup path on host: `/opt/anaconda-site/shared/backups`
 
-Любая операция restore должна проводиться отдельно от release pipeline и только после фиксации текущего incident state.
+Restore выполняется отдельно от release pipeline и только после фиксации текущего incident state.

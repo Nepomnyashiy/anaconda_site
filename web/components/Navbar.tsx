@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import { Button } from "./Button";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
@@ -32,14 +31,14 @@ const Navbar = ({ items, logo, cta }: NavbarProps) => {
   return (
     <motion.header
       className={cn(
-        "fixed top-0 left-0 right-0 z-sticky h-[var(--navbar-height-desktop)] border-b transition-colors duration-300",
+        "fixed left-0 right-0 top-0 z-sticky h-[var(--navbar-height-desktop)] border-b transition-colors duration-300",
         isScrolled
-          ? "border-neutral-800 bg-bg-overlay/80 backdrop-blur-lg"
-          : "border-transparent"
+          ? "border-neutral-800 bg-neutral-950/88 backdrop-blur-xl"
+          : "border-transparent bg-transparent"
       )}
       animate={{ height: isScrolled ? "var(--navbar-height-desktop-scrolled)" : "var(--navbar-height-desktop)" }}
     >
-      <div className="container mx-auto flex h-full items-center justify-between">
+      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6 md:px-10">
         <div className="flex items-center gap-10">
           <a href="/" aria-label="Homepage">
             {logo}
@@ -60,14 +59,13 @@ const Navbar = ({ items, logo, cta }: NavbarProps) => {
         <div className="hidden lg:flex items-center gap-4">{cta}</div>
 
         <div className="lg:hidden">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => setIsMenuOpen(true)}
             aria-label="Open menu"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-800 bg-neutral-950/60 text-neutral-50 transition hover:border-neutral-700 hover:bg-neutral-900"
           >
             <Menu />
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -83,14 +81,13 @@ const Navbar = ({ items, logo, cta }: NavbarProps) => {
               <a href="/" aria-label="Homepage">
                 {logo}
               </a>
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setIsMenuOpen(false)}
                 aria-label="Close menu"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-800 bg-neutral-950/60 text-neutral-50 transition hover:border-neutral-700 hover:bg-neutral-900"
               >
                 <X />
-              </Button>
+              </button>
             </div>
             <nav className="mt-12 flex flex-col gap-6">
               {items.map((item) => (

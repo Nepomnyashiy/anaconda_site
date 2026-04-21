@@ -1,6 +1,8 @@
 .DS_Store
 .env
 .env.local
+.env.test
+.env.test.local
 .env.prod
 .env.prod.local
 .pytest_cache/
@@ -15,6 +17,7 @@ coverage/
 playwright-report/
 test-results/
 dist/
+memories/
 infra/keys/id_ed25519
 infra/ansible/group_vars/prod/vault.yml
 infra/ansible/.vault_pass.txt

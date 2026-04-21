@@ -1,37 +1,42 @@
 # Server Bootstrap
 
-## Host audit
+## Назначение
 
-Current baseline for `45.38.23.152` before bootstrap:
+Bootstrap подготавливает минимальный production host для release-based deploy сайта и API.
+
+## Текущий baseline host
 
 - Ubuntu 24.04
-- ~1 GB RAM
-- no swap
-- Docker missing
-- Nginx missing
-- only SSH exposed
+- ограниченная RAM, поэтому bootstrap создает swapfile
+- вход по SSH
+- до bootstrap не гарантируются Docker и `nginx`
 
-Because of low RAM, bootstrap enables a swapfile before production builds.
+## Что делает bootstrap
 
-## Bootstrap result
+- создает `deploy` user и добавляет его в `sudo` и `docker`
+- настраивает SSH key auth
+- ставит Docker Engine + Compose plugin
+- ставит `nginx`
+- включает UFW
+- включает fail2ban
+- включает unattended upgrades
+- создает `/opt/anaconda-site/releases`
+- создает `/opt/anaconda-site/shared/env`
+- создает `/opt/anaconda-site/shared/backups`
+- создает базовую `nginx` конфигурацию для проксирования `web` и `api`
+- добавляет cron backup для PostgreSQL
 
-The bootstrap script prepares:
+## Чего bootstrap пока не делает
 
-- `deploy` user with `sudo` and `docker` access
-- SSH key auth
-- Docker Engine + Compose plugin
-- Nginx
-- UFW
-- fail2ban
-- unattended upgrades
-- `/opt/anaconda-site/releases`
-- `/opt/anaconda-site/shared/env`
-- `/opt/anaconda-site/shared/backups`
+- не выдает production TLS/domain setup
+- не настраивает внешнюю observability stack
+- не добавляет полноценный WAF или advanced rate limiting
 
-## Files used
+Это осознанный baseline, а не окончательная enterprise-инфраструктура.
+
+## Связанные файлы
 
 - local wrapper: `infra/scripts/bootstrap_server.sh`
 - remote bootstrap: `infra/scripts/server_bootstrap_remote.sh`
-- server audit: `infra/scripts/server_audit.sh`
 - runtime deploy: `infra/scripts/deploy_remote.sh`
 - backup: `infra/scripts/backup_postgres.sh`

@@ -18,16 +18,17 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "OSNOVA IT",
-  description: "Интеллектуальная инфраструктура enterprise-уровня для интеграции legacy, AI и корпоративных процессов."
+  title: "ANACONDA / OSNOVA",
+  description:
+    "Digital Symbiont Platform для централизации операционной памяти, AI-оркестрации и безопасной интеграции legacy-контуров."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const navItems = [
-    { label: "Услуги", href: "#services" },
-    { label: "Кейсы", href: "#cases" },
-    { label: "О нас", href: "#about" },
-    { label: "Блог", href: "#blog" },
+    { label: "Платформа", href: "#platform" },
+    { label: "Архитектура", href: "#architecture" },
+    { label: "Разработка", href: "#delivery" },
+    { label: "Контакт", href: "#contact" },
   ];
 
   return (
@@ -41,7 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
               href="#contact"
               className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-400"
             >
-              Получить AI-аудит
+              Запросить демо
             </a>
           }
         />

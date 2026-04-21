@@ -1,70 +1,73 @@
 # Release Guide
 
-## Purpose
+## Назначение
 
-Этот документ фиксирует release flow для platform web surface `ANACONDA / OSNOVA`. Его задача — не допускать прямого выхода на production без проверяемого artifact, smoke-gates и rollback-плана.
+Release flow должен выпускать рабочий platform web surface без расхождения между кодом, docs, runtime и deploy-сценарием.
 
 ## Release prerequisites
 
 Перед релизом должны быть выполнены:
 
-- локальные quality gates:
-  - `make lint`
-  - `make test`
-  - `make typecheck`
-  - `make build`
-- production artifact validation:
-  - `docker compose -f compose.prod.yml config`
-  - `make prod-smoke`
-  - `make prod-down`
-- review release scope:
-  - backend/API changes
-  - migrations
-  - frontend runtime changes
-  - CI/CD or deploy changes
+```bash
+make lint
+make test
+make typecheck
+make build
+docker compose -f compose.prod.yml config
+make prod-smoke
+make prod-down
+```
 
-## Release artifact
+Также нужно проверить scope релиза:
+- public site / narrative changes;
+- API contract changes;
+- migrations;
+- infra / deploy / CI changes;
+- env-contract changes.
 
-Release-bearing branch: `main`.
+## Release branch discipline
 
-Любой push в `main` следует считать кандидатом на production deployment при наличии GitHub environment secrets:
+Предпочтительный поток:
+1. собрать релизный scope в отдельной branch;
+2. не использовать `git add .`, если worktree смешанный;
+3. проверить diff перед commit;
+4. слить branch в `main`;
+5. считать именно `push` в `main` production trigger.
 
+## GitHub pipeline contract
+
+Pipeline делает:
+1. `web` — lint, typecheck, build
+2. `api` — lint, tests
+3. `smoke` — production-like boot и lead submission
+4. `deploy` — только на `main` и только при наличии production secrets
+
+Обязательные secrets:
 - `PROD_HOST`
 - `PROD_USER`
 - `PROD_SSH_PRIVATE_KEY`
 - `PROD_ENV_FILE`
 
-Релизный commit должен быть:
+Если `deploy` job недоступен или secrets временно невалидны, используйте manual deploy с этой машины.
 
-- buildable
-- testable
-- compatible with current production topology
-- сопровожден rollback strategy при infra/runtime изменениях
+## Manual deploy
 
-## GitHub pipeline contract
-
-Pipeline выполняет:
-
-1. `web` — lint, typecheck, build
-2. `api` — lint, tests
-3. `smoke` — подъем production stack в CI и test lead submission
-4. `deploy` — только для `main` и только при наличии production secrets
-
-Если `deploy` не стартует:
-
-- проверить, что push ушел именно в `main`
-- проверить GitHub environment `production`
-- проверить наличие всех `PROD_*` secrets
-
-## Manual release fallback
-
-Если GitHub deploy временно недоступен, manual fallback:
+Fallback для ручного релиза:
 
 ```bash
 SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/deploy_release.sh deploy@45.38.23.152
 ```
 
-После ручного релиза обязательно проверить:
+Более короткий operator flow:
+
+```bash
+make prod-status TARGET=deploy@45.38.23.152
+make prod-releases TARGET=deploy@45.38.23.152
+make prod-deploy TARGET=deploy@45.38.23.152
+make prod-status TARGET=deploy@45.38.23.152
+```
+
+После выкладки нужно проверить:
 
 ```bash
 curl -f http://45.38.23.152/
@@ -73,21 +76,18 @@ curl -f http://45.38.23.152/api/v1/health
 
 ## Rollback
 
-Rollback выполняется через release directories и symlink `current`.
+`infra/scripts/deploy_remote.sh` теперь пытается автоматически откатиться на предыдущий release, если новый релиз не проходит healthcheck.
 
-Шаги:
-
-1. определить предыдущий стабильный release id на хосте
-2. переключить `current` на предыдущий release
-3. заново выполнить runtime deploy:
+Если нужен ручной rollback:
+1. определить предыдущую стабильную release directory на host;
+2. выполнить rollback на нее:
 
 ```bash
-APP_ROOT=/opt/anaconda-site RELEASE_ID=<previous-release-id> /bin/bash /opt/anaconda-site/current/infra/scripts/deploy_remote.sh
+SSH_KEY_PATH=infra/keys/id_ed25519 ./infra/scripts/rollback_release.sh deploy@45.38.23.152 <previous-release-id>
 ```
 
-Rollback должен использоваться при:
-
-- failed healthcheck
-- runtime regression after deploy
-- migration/runtime incompatibility
-- broken frontend or API entrypoint
+Rollback обязателен при:
+- failed healthcheck;
+- runtime regression;
+- broken public site;
+- incompatibility migrations/runtime.
