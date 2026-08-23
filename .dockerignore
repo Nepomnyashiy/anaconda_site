@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.env.*
+.codex
+.continue
+ansible
+dist
+node_modules
+*.docx
+*.log

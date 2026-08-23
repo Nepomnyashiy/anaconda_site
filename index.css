@@ -1,3 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --color-slate-850: #151e2e;
+}
+
 /* Global scroll and layout reset */
 html, body {
   margin: 0;

@@ -1,20 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Anaconda Site
 
-# Run and deploy your AI Studio app
+Статический React/Vite-сайт для `https://anaconda.godny.tech`.
 
-This contains everything you need to run your app locally.
+## Локальная разработка
 
-View your app in AI Studio: https://ai.studio/apps/drive/1ebcN_liFjofobBVIiLvEBkLuntB_CLq9
+```bash
+npm ci
+npm run dev
+```
 
-## Run Locally
+Сайт не требует API keys или runtime `.env`. Секреты нельзя передавать через
+Vite: frontend bundle доступен каждому посетителю. Будущие AI-интеграции должны
+вызывать отдельный server-side API.
 
-**Prerequisites:**  Node.js
+## Проверки
 
+```bash
+npm run build
+npm audit
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Production image
+
+```bash
+docker build -t anaconda-site:local .
+docker run --rm -p 18080:8080 anaconda-site:local
+curl -fsS http://127.0.0.1:18080/healthz
+```
+
+Image использует multi-stage build и unprivileged Nginx на порту `8080`.
+Kubernetes manifests и edge routing находятся в репозитории `zuer_sysadmin`.

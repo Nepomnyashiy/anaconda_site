@@ -28,3 +28,8 @@ dist-ssr
 *.key
 *.pem
 id_*
+
+# Local environment files must never be committed or copied into images.
+.env
+.env.*
+!.env.example
